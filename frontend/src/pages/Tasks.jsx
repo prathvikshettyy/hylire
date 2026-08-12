@@ -19,36 +19,66 @@ const Tasks = () => {
   const [deadline, setDeadline] = useState('');
   const [siteId, setSiteId] = useState('');
 
+  const [projects, setProjects] = useState([]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch sites
-      const siteRes = await fetch(`${apiBaseUrl}/sites`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (siteRes.ok) {
-        const data = await siteRes.json();
-        setSites(data);
-        if (data.length > 0) {
-          setSelectedSiteId(data[0].id);
-          setSiteId(data[0].id);
-        }
+      // 1. Fetch projects & sites concurrently
+      const [projRes, siteRes, teamRes] = await Promise.all([
+        fetch(`${apiBaseUrl}/projects`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${apiBaseUrl}/sites`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${apiBaseUrl}/auth/list`, { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+
+      let fetchedProjects = [];
+      let fetchedSites = [];
+
+      if (projRes.ok) {
+        fetchedProjects = await projRes.json();
+        setProjects(fetchedProjects);
       }
 
-      // 2. Fetch team
-      const teamRes = await fetch(`${apiBaseUrl}/auth/list`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      if (siteRes.ok) {
+        fetchedSites = await siteRes.json();
+      }
+
+      // Combine sites and ensure every project has at least one site representation
+      const allSites = [...fetchedSites];
+      fetchedProjects.forEach(p => {
+        const hasSite = fetchedSites.some(s => s.projectId === p.id);
+        if (!hasSite) {
+          allSites.push({
+            id: `auto-site-${p.id}`,
+            projectId: p.id,
+            name: `${p.name} - Main Site`,
+            address: 'Primary Site',
+            isAuto: true
+          });
+        }
       });
+
+      setSites(allSites);
+      if (allSites.length > 0) {
+        setSelectedSiteId(allSites[0].id);
+        setSiteId(allSites[0].id);
+      }
+
       if (teamRes.ok) {
         const data = await teamRes.json();
         setTeam(data.filter(u => u.role !== 'client'));
       }
     } catch (err) {
       console.warn('API down. Initializing offline variables.');
+      const fallbackProjects = [
+        { id: "p-1", name: "Apex Commercial Tower" },
+        { id: "p-2", name: "Riverview Residential Complex" }
+      ];
+      setProjects(fallbackProjects);
       setSites([
-        { id: "s-1", name: "Apex Site A - Foundation" },
-        { id: "s-2", name: "Apex Site B - Structural Core" },
-        { id: "s-3", name: "Riverview Block A" }
+        { id: "s-1", projectId: "p-1", name: "Apex Commercial Tower - Site A (Foundation)" },
+        { id: "s-2", projectId: "p-1", name: "Apex Commercial Tower - Site B (Core)" },
+        { id: "s-3", projectId: "p-2", name: "Riverview Residential Complex - Block A" }
       ]);
       setTeam([
         { id: "u-2", fullName: "Sarah Engineer", role: "engineer" },
@@ -96,7 +126,36 @@ const Tasks = () => {
     e.preventDefault();
     if (!siteId || !name) return;
 
-    const payload = { siteId, name, description, assignedTo, priority, deadline };
+    let targetSiteId = siteId;
+
+    // If target site is auto-generated for a project without existing sites
+    if (siteId.startsWith('auto-site-')) {
+      const projId = siteId.replace('auto-site-', '');
+      const selectedSite = sites.find(s => s.id === siteId);
+      try {
+        const siteRes = await fetch(`${apiBaseUrl}/sites`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            projectId: projId,
+            name: selectedSite ? selectedSite.name : 'Main Construction Site',
+            address: 'Primary Site Location'
+          })
+        });
+        if (siteRes.ok) {
+          const createdSite = await siteRes.json();
+          targetSiteId = createdSite.id;
+          setSites(sites.map(s => s.id === siteId ? createdSite : s));
+        }
+      } catch (e) {
+        console.warn('Offline site creation fallback');
+      }
+    }
+
+    const payload = { siteId: targetSiteId, name, description, assignedTo, priority, deadline };
 
     try {
       const res = await fetch(`${apiBaseUrl}/tasks`, {
@@ -109,7 +168,7 @@ const Tasks = () => {
       });
       if (res.ok) {
         const newTask = await res.json();
-        if (siteId === selectedSiteId) {
+        if (targetSiteId === selectedSiteId || siteId === selectedSiteId) {
           setTasks([...tasks, newTask]);
         }
         resetForm();
@@ -118,7 +177,7 @@ const Tasks = () => {
       console.warn('Offline mode: creating mock task.');
       const newTask = {
         id: `t-${Date.now()}`,
-        siteId,
+        siteId: targetSiteId,
         name,
         description,
         assignedTo: assignedTo || 'u-5',
@@ -126,7 +185,7 @@ const Tasks = () => {
         priority,
         deadline: deadline || new Date().toISOString().split('T')[0]
       };
-      if (siteId === selectedSiteId) {
+      if (targetSiteId === selectedSiteId || siteId === selectedSiteId) {
         setTasks([...tasks, newTask]);
       }
       resetForm();

@@ -30,6 +30,15 @@ router.post('/', async (req, res) => {
             endDate,
             status: 'planning'
         });
+
+        // Auto-create a primary construction site for this project so tasks can be assigned immediately
+        await db.sites.create({
+            projectId: newProj.id,
+            name: `${name} - Main Site`,
+            address: 'Primary Project Site',
+            status: 'active'
+        });
+
         res.status(201).json(newProj);
     } catch (error) {
         res.status(500).json({ error: error.message });
