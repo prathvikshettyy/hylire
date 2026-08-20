@@ -73,8 +73,92 @@
     }
   ],
   "tasks": [],
-  "materials": [],
-  "brickEstimations": [],
+  "materials": [
+    {
+      "id": "m-1787247535614-113",
+      "projectId": "p-1787234233561",
+      "name": "Cement (OPC/PPC 50kg)",
+      "quantity": 112,
+      "unit": "bags",
+      "unitCost": 380,
+      "totalCost": 42560,
+      "createdAt": "2026-08-20T17:38:55.615Z"
+    },
+    {
+      "id": "m-1787247535617-118",
+      "projectId": "p-1787234233561",
+      "name": "River Sand / M-Sand",
+      "quantity": 210,
+      "unit": "cu ft",
+      "unitCost": 45,
+      "totalCost": 9450,
+      "createdAt": "2026-08-20T17:38:55.617Z"
+    },
+    {
+      "id": "m-1787247535625-93",
+      "projectId": "p-1787234233561",
+      "name": "Coarse Aggregate (20mm)",
+      "quantity": 420,
+      "unit": "cu ft",
+      "unitCost": 55,
+      "totalCost": 23100,
+      "createdAt": "2026-08-20T17:38:55.625Z"
+    },
+    {
+      "id": "m-1787247535627-764",
+      "projectId": "p-1787234233561",
+      "name": "TMT Steel Rebar (Fe500D)",
+      "quantity": 1668,
+      "unit": "kg",
+      "unitCost": 65,
+      "totalCost": 108420,
+      "createdAt": "2026-08-20T17:38:55.627Z"
+    }
+  ],
+  "brickEstimations": [
+    {
+      "id": "be-1787247459984",
+      "projectId": "p-1787234233561",
+      "siteId": null,
+      "length": 50,
+      "width": 9,
+      "height": 10,
+      "thickness": 9,
+      "bricksNeeded": 4288,
+      "cementBags": 16,
+      "sandCuFt": 116,
+      "totalCost": 47748,
+      "createdAt": "2026-08-20T17:37:39.986Z"
+    },
+    {
+      "id": "be-1787247507622",
+      "projectId": "p-1787234233561",
+      "siteId": null,
+      "length": 50,
+      "width": 9,
+      "height": 10,
+      "thickness": 9,
+      "bricksNeeded": 3898,
+      "cementBags": 16,
+      "sandCuFt": 116,
+      "totalCost": 44433,
+      "createdAt": "2026-08-20T17:38:27.622Z"
+    },
+    {
+      "id": "be-1787247508862",
+      "projectId": "p-1787234233561",
+      "siteId": null,
+      "length": 50,
+      "width": 9,
+      "height": 10,
+      "thickness": 9,
+      "bricksNeeded": 3898,
+      "cementBags": 16,
+      "sandCuFt": 116,
+      "totalCost": 44433,
+      "createdAt": "2026-08-20T17:38:28.862Z"
+    }
+  ],
   "costEstimations": [],
   "documents": [],
   "chatMessages": []
