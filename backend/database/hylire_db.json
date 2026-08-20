@@ -1,0 +1,73 @@
+{
+  "users": [
+    {
+      "id": "u-1",
+      "email": "admin@hylire.com",
+      "password": "password123",
+      "fullName": "John Builder",
+      "role": "builder",
+      "createdAt": "2026-08-20T13:55:37.453Z"
+    },
+    {
+      "id": "u-2",
+      "email": "engineer@hylire.com",
+      "password": "password123",
+      "fullName": "Sarah Engineer",
+      "role": "engineer",
+      "createdAt": "2026-08-20T13:55:37.455Z"
+    },
+    {
+      "id": "u-3",
+      "email": "client@hylire.com",
+      "password": "password123",
+      "fullName": "Robert Client",
+      "role": "client",
+      "createdAt": "2026-08-20T13:55:37.455Z"
+    },
+    {
+      "id": "u-4",
+      "email": "contractor@hylire.com",
+      "password": "password123",
+      "fullName": "Mark Contractor",
+      "role": "contractor",
+      "createdAt": "2026-08-20T13:55:37.455Z"
+    },
+    {
+      "id": "u-5",
+      "email": "worker@hylire.com",
+      "password": "password123",
+      "fullName": "David Worker",
+      "role": "worker",
+      "createdAt": "2026-08-20T13:55:37.455Z"
+    }
+  ],
+  "projects": [
+    {
+      "id": "p-1787234233561",
+      "name": "nitte",
+      "description": "",
+      "clientId": null,
+      "budget": 2000000,
+      "startDate": "",
+      "endDate": "",
+      "status": "planning",
+      "createdAt": "2026-08-20T13:57:13.561Z"
+    }
+  ],
+  "sites": [
+    {
+      "id": "s-1787234233564",
+      "projectId": "p-1787234233561",
+      "name": "nitte - Main Site",
+      "address": "Primary Project Site",
+      "status": "active",
+      "createdAt": "2026-08-20T13:57:13.564Z"
+    }
+  ],
+  "tasks": [],
+  "materials": [],
+  "brickEstimations": [],
+  "costEstimations": [],
+  "documents": [],
+  "chatMessages": []
+}

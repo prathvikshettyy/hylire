@@ -39,12 +39,9 @@ const Projects = () => {
         setUsersList(data.filter(u => u.role === 'client'));
       }
     } catch (err) {
-      console.warn('API error. Initializing static offline state.');
-      // Local fallback data
-      setProjects([
-        { id: "p-1", name: "Apex Commercial Tower", description: "Modern 15-story office building in downtown district.", clientId: "u-3", status: "in-progress", startDate: "2026-03-01", endDate: "2027-06-30", budget: 15000000 },
-        { id: "p-2", name: "Riverview Residential Complex", description: "Multi-family premium housing estate overlooking the river.", clientId: "u-3", status: "planning", startDate: "2026-09-15", endDate: "2028-03-20", budget: 8500000 }
-      ]);
+      console.warn('API error or offline mode. Starting with clean project list.');
+      // Local fallback data (empty state)
+      setProjects([]);
       setUsersList([
         { id: "u-3", fullName: "Robert Client", role: "client", email: "client@hylire.com" }
       ]);

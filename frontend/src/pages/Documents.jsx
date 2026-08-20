@@ -28,16 +28,16 @@ const Documents = () => {
         }
       }
     } catch (err) {
-      setProjects([
-        { id: "p-1", name: "Apex Commercial Tower" },
-        { id: "p-2", name: "Riverview Residential Complex" }
-      ]);
-      setSelectedProjectId("p-1");
+      setProjects([]);
+      setSelectedProjectId('');
     }
   };
 
   const fetchDocs = async () => {
-    if (!selectedProjectId) return;
+    if (!selectedProjectId) {
+      setDocuments([]);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`${apiBaseUrl}/documents/project/${selectedProjectId}`, {
@@ -48,13 +48,7 @@ const Documents = () => {
         setDocuments(data);
       }
     } catch (err) {
-      // Static documents fallback scoped by project
-      const mockDocs = [
-        { id: "d-1", projectId: "p-1", name: "Apex_Structural_Blueprints.pdf", fileUrl: "#", fileType: "application/pdf", uploadedBy: " Sarah E." },
-        { id: "d-2", projectId: "p-1", name: "Soil_Testing_Report_Final.pdf", fileUrl: "#", fileType: "application/pdf", uploadedBy: " Sarah E." },
-        { id: "d-3", projectId: "p-2", name: "Contract_Builder_Agreement_Signed.pdf", fileUrl: "#", fileType: "application/pdf", uploadedBy: " John B." }
-      ];
-      setDocuments(mockDocs.filter(d => d.projectId === selectedProjectId));
+      setDocuments([]);
     } finally {
       setLoading(false);
     }

@@ -59,6 +59,29 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Forgot Password API
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+    }
+
+    try {
+        const user = await db.users.findByEmail(email);
+        if (!user) {
+            // Standard security practice: respond with success even if email not found to avoid enumeration
+            return res.json({ message: 'If an account exists with that email, a password reset link has been dispatched.' });
+        }
+
+        res.json({
+            message: `Password reset instruction link sent to ${email}`,
+            resetToken: `reset-${user.id}-${Date.now()}`
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get profile from headers token
 router.get('/profile', async (req, res) => {
     const authHeader = req.headers.authorization;

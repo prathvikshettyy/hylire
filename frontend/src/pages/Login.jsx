@@ -30,6 +30,11 @@ const Login = () => {
     }
   };
 
+  const handleQuickLogin = (demoEmail) => {
+    setEmail(demoEmail);
+    setPassword('password123');
+  };
+
   return (
     <div className="auth-wrapper">
       <div className="auth-card">
@@ -65,7 +70,7 @@ const Login = () => {
             <input 
               type="email" 
               className="form-input" 
-              placeholder="e.g. engineer@hylire.com" 
+              placeholder="e.g. admin@hylire.com" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -100,19 +105,51 @@ const Login = () => {
 
         <div style={{
           marginTop: '24px',
-          padding: '12px',
+          padding: '14px',
           background: 'rgba(255,255,255,0.02)',
           border: '1px solid var(--border-color)',
           borderRadius: '10px',
-          fontSize: '0.75rem',
+          fontSize: '0.78rem',
           color: 'var(--text-dim)'
         }}>
-          <strong>Demo Logins (password: password123):</strong>
-          <ul style={{ paddingLeft: '16px', marginTop: '4px' }}>
-            <li>Builder/Admin: admin@hylire.com</li>
-            <li>Engineer: engineer@hylire.com</li>
-            <li>Client: client@hylire.com</li>
-          </ul>
+          <div style={{ fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Quick Demo Logins (Password: <code>password123</code>):</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            <button 
+              type="button" 
+              onClick={() => handleQuickLogin('admin@hylire.com')}
+              style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              Admin / Builder
+            </button>
+            <button 
+              type="button" 
+              onClick={() => handleQuickLogin('engineer@hylire.com')}
+              style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              Engineer
+            </button>
+            <button 
+              type="button" 
+              onClick={() => handleQuickLogin('client@hylire.com')}
+              style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              Client
+            </button>
+            <button 
+              type="button" 
+              onClick={() => handleQuickLogin('contractor@hylire.com')}
+              style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              Contractor
+            </button>
+            <button 
+              type="button" 
+              onClick={() => handleQuickLogin('worker@hylire.com')}
+              style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
+            >
+              Worker
+            </button>
+          </div>
         </div>
       </div>
     </div>

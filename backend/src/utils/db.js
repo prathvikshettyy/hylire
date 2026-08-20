@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
@@ -14,55 +16,73 @@ if (!useFallback) {
         console.warn('Supabase configuration error, using local fallback DB:', e.message);
     }
 } else {
-    console.log('Using local fallback database (In-Memory).');
+    console.log('Using persistent local JSON database (database/hylire_db.json).');
 }
 
-// Seed In-Memory Database for local testing
-const localStore = {
+// Database JSON File Path for 100% Persistent Local Storage
+const DB_FILE_PATH = path.join(__dirname, '../../database/hylire_db.json');
+
+// Default initial state
+const defaultStore = {
     users: [
-        { id: "u-1", email: "admin@hylire.com", password: "password123", fullName: "John Builder", role: "builder" },
-        { id: "u-2", email: "engineer@hylire.com", password: "password123", fullName: "Sarah Engineer", role: "engineer" },
-        { id: "u-3", email: "client@hylire.com", password: "password123", fullName: "Robert Client", role: "client" },
-        { id: "u-4", email: "contractor@hylire.com", password: "password123", fullName: "Mark Contractor", role: "contractor" },
-        { id: "u-5", email: "worker@hylire.com", password: "password123", fullName: "David Worker", role: "worker" }
+        { id: "u-1", email: "admin@hylire.com", password: "password123", fullName: "John Builder", role: "builder", createdAt: new Date().toISOString() },
+        { id: "u-2", email: "engineer@hylire.com", password: "password123", fullName: "Sarah Engineer", role: "engineer", createdAt: new Date().toISOString() },
+        { id: "u-3", email: "client@hylire.com", password: "password123", fullName: "Robert Client", role: "client", createdAt: new Date().toISOString() },
+        { id: "u-4", email: "contractor@hylire.com", password: "password123", fullName: "Mark Contractor", role: "contractor", createdAt: new Date().toISOString() },
+        { id: "u-5", email: "worker@hylire.com", password: "password123", fullName: "David Worker", role: "worker", createdAt: new Date().toISOString() }
     ],
-    projects: [
-        { id: "p-1", name: "Apex Commercial Tower", description: "Modern 15-story office building in downtown district.", clientId: "u-3", status: "in-progress", startDate: "2026-03-01", endDate: "2027-06-30", budget: 15000000, createdAt: new Date() },
-        { id: "p-2", name: "Riverview Residential Complex", description: "Multi-family premium housing estate overlooking the river.", clientId: "u-3", status: "planning", startDate: "2026-09-15", endDate: "2028-03-20", budget: 8500000, createdAt: new Date() }
-    ],
-    sites: [
-        { id: "s-1", projectId: "p-1", name: "Apex Site A - Foundation", address: "102 Main St, Sector 4", engineerId: "u-2", status: "active", createdAt: new Date() },
-        { id: "s-2", projectId: "p-1", name: "Apex Site B - Structural Core", address: "104 Main St, Sector 4", engineerId: "u-2", status: "active", createdAt: new Date() },
-        { id: "s-3", projectId: "p-2", name: "Riverview Block A", address: "40 Riverdale Rd", engineerId: "u-4", status: "active", createdAt: new Date() }
-    ],
-    tasks: [
-        { id: "t-1", siteId: "s-1", name: "Soil Excavation & Grading", description: "Grade the foundation area and clear soil for baseline reinforcement.", assignedTo: "u-5", status: "done", priority: "high", deadline: "2026-08-10", createdAt: new Date() },
-        { id: "t-2", siteId: "s-1", name: "Concrete Pouring - Level 1", description: "Pour concrete slab for the main tower base. Review rebar structural integrity first.", assignedTo: "u-2", status: "in-progress", priority: "high", deadline: "2026-08-20", createdAt: new Date() },
-        { id: "t-3", siteId: "s-2", name: "Rebar Installation & Welding", description: "Assemble steel support framework for internal core lift column.", assignedTo: "u-4", status: "todo", priority: "medium", deadline: "2026-08-30", createdAt: new Date() },
-        { id: "t-4", siteId: "s-3", name: "Site Clearance & Boundary Setup", description: "Erect safety barricades and deploy onsite office cabin.", assignedTo: "u-5", status: "todo", priority: "low", deadline: "2026-09-01", createdAt: new Date() }
-    ],
-    materials: [
-        { id: "m-1", projectId: "p-1", name: "Cement", quantity: 500, unit: "bags", unitCost: 380, totalCost: 190000, createdAt: new Date() },
-        { id: "m-2", projectId: "p-1", name: "Sand", quantity: 1200, unit: "cu ft", unitCost: 45, totalCost: 54000, createdAt: new Date() },
-        { id: "m-3", projectId: "p-1", name: "Steel Rebars", quantity: 1500, unit: "kg", unitCost: 65, totalCost: 97500, createdAt: new Date() }
-    ],
-    brickEstimations: [
-        { id: "be-1", projectId: "p-1", siteId: "s-1", length: 100, width: 10, height: 12, thickness: 9, bricksNeeded: 55000, createdAt: new Date() }
-    ],
-    costEstimations: [
-        { id: "ce-1", projectId: "p-1", materialCost: 219500, laborCost: 150000, transportCost: 35000, miscCost: 25000, totalEstimatedCost: 429500, createdAt: new Date() }
-    ],
-    documents: [
-        { id: "d-1", projectId: "p-1", name: "Apex_Structural_Blueprints.pdf", fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileType: "application/pdf", uploadedBy: "u-2", createdAt: new Date() },
-        { id: "d-2", projectId: "p-1", name: "Soil_Testing_Report_Final.pdf", fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", fileType: "application/pdf", uploadedBy: "u-2", createdAt: new Date() }
-    ],
-    chatMessages: [
-        { id: "msg-1", projectId: "p-1", senderId: "u-2", senderName: "Sarah Engineer", messageText: "Excavation for Site A is completed. We are starting steel rebar assembly tomorrow.", fileUrl: null, createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2) },
-        { id: "msg-2", projectId: "p-1", senderId: "u-3", senderName: "Robert Client", messageText: "Excellent progress. Keep me posted on the concrete pour metrics.", fileUrl: null, createdAt: new Date(Date.now() - 1000 * 60 * 60 * 1) }
-    ]
+    projects: [],
+    sites: [],
+    tasks: [],
+    materials: [],
+    brickEstimations: [],
+    costEstimations: [],
+    documents: [],
+    chatMessages: []
 };
 
-// Generic Database Helper to support local or Supabase
+// Load store from persistent JSON file on disk
+function loadStore() {
+    try {
+        if (fs.existsSync(DB_FILE_PATH)) {
+            const raw = fs.readFileSync(DB_FILE_PATH, 'utf-8');
+            const data = JSON.parse(raw);
+            return {
+                users: Array.isArray(data.users) && data.users.length > 0 ? data.users : defaultStore.users,
+                projects: Array.isArray(data.projects) ? data.projects : [],
+                sites: Array.isArray(data.sites) ? data.sites : [],
+                tasks: Array.isArray(data.tasks) ? data.tasks : [],
+                materials: Array.isArray(data.materials) ? data.materials : [],
+                brickEstimations: Array.isArray(data.brickEstimations) ? data.brickEstimations : [],
+                costEstimations: Array.isArray(data.costEstimations) ? data.costEstimations : [],
+                documents: Array.isArray(data.documents) ? data.documents : [],
+                chatMessages: Array.isArray(data.chatMessages) ? data.chatMessages : []
+            };
+        }
+    } catch (err) {
+        console.error('Error reading database file, using default store:', err.message);
+    }
+    // If file doesn't exist, create it with defaultStore
+    saveStore(defaultStore);
+    return defaultStore;
+}
+
+// Save store to disk synchronously to prevent race conditions & data loss
+function saveStore(store) {
+    try {
+        const dir = path.dirname(DB_FILE_PATH);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        fs.writeFileSync(DB_FILE_PATH, JSON.stringify(store, null, 2), 'utf-8');
+    } catch (err) {
+        console.error('Failed to persist database changes to disk:', err.message);
+    }
+}
+
+const localStore = loadStore();
+
+// Generic Database Helper to support persistent disk storage or Supabase PostgreSQL
 const db = {
     // Auth & Users
     users: {
@@ -70,7 +90,7 @@ const db = {
             if (supabase) {
                 const { data, error } = await supabase.from('users').select('*').eq('email', email).single();
                 if (error && error.code !== 'PGRST116') throw error;
-                return data;
+                if (data) return data;
             }
             return localStore.users.find(u => u.email.toLowerCase() === email.toLowerCase());
         },
@@ -78,12 +98,12 @@ const db = {
             if (supabase) {
                 const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
                 if (error) throw error;
-                return data;
+                if (data) return data;
             }
             return localStore.users.find(u => u.id === id);
         },
         async create(user) {
-            const newUser = { id: `u-${Date.now()}`, ...user, createdAt: new Date() };
+            const newUser = { id: `u-${Date.now()}`, ...user, createdAt: new Date().toISOString() };
             if (supabase) {
                 const { data, error } = await supabase.from('users').insert([{
                     email: user.email,
@@ -91,16 +111,17 @@ const db = {
                     role: user.role
                 }]).select().single();
                 if (error) throw error;
-                return data;
+                newUser.id = data.id;
             }
             localStore.users.push(newUser);
+            saveStore(localStore);
             return newUser;
         },
         async listAll() {
             if (supabase) {
                 const { data, error } = await supabase.from('users').select('*');
                 if (error) throw error;
-                return data;
+                if (data && data.length > 0) return data;
             }
             return localStore.users;
         }
@@ -114,7 +135,7 @@ const db = {
                 if (filters.clientId) query = query.eq('client_id', filters.clientId);
                 const { data, error } = await query;
                 if (error) throw error;
-                return data;
+                if (data) return data;
             }
             let res = localStore.projects;
             if (filters.clientId) {
@@ -126,12 +147,16 @@ const db = {
             if (supabase) {
                 const { data, error } = await supabase.from('projects').select('*').eq('id', id).single();
                 if (error) throw error;
-                return data;
+                if (data) return data;
             }
             return localStore.projects.find(p => p.id === id);
         },
         async create(project) {
-            const newProject = { id: `p-${Date.now()}`, ...project, createdAt: new Date() };
+            const newProject = { 
+                id: `p-${Date.now()}`, 
+                ...project, 
+                createdAt: new Date().toISOString() 
+            };
             if (supabase) {
                 const { data, error } = await supabase.from('projects').insert([{
                     name: project.name,
@@ -143,31 +168,39 @@ const db = {
                     budget: project.budget
                 }]).select().single();
                 if (error) throw error;
-                return data;
+                newProject.id = data.id;
             }
             localStore.projects.push(newProject);
+            saveStore(localStore);
             return newProject;
         },
         async update(id, updates) {
             if (supabase) {
                 const { data, error } = await supabase.from('projects').update(updates).eq('id', id).select().single();
                 if (error) throw error;
-                return data;
             }
             const idx = localStore.projects.findIndex(p => p.id === id);
             if (idx === -1) return null;
-            localStore.projects[idx] = { ...localStore.projects[idx], ...updates, updatedAt: new Date() };
+            localStore.projects[idx] = { ...localStore.projects[idx], ...updates, updatedAt: new Date().toISOString() };
+            saveStore(localStore);
             return localStore.projects[idx];
         },
         async delete(id) {
             if (supabase) {
                 const { error } = await supabase.from('projects').delete().eq('id', id);
                 if (error) throw error;
-                return true;
             }
             const idx = localStore.projects.findIndex(p => p.id === id);
             if (idx === -1) return false;
             localStore.projects.splice(idx, 1);
+            // Cascade delete sub-sites, tasks, materials, estimations
+            localStore.sites = localStore.sites.filter(s => s.projectId !== id);
+            localStore.materials = localStore.materials.filter(m => m.projectId !== id);
+            localStore.brickEstimations = localStore.brickEstimations.filter(b => b.projectId !== id);
+            localStore.costEstimations = localStore.costEstimations.filter(c => c.projectId !== id);
+            localStore.documents = localStore.documents.filter(d => d.projectId !== id);
+            localStore.chatMessages = localStore.chatMessages.filter(msg => msg.projectId !== id);
+            saveStore(localStore);
             return true;
         }
     },
@@ -181,7 +214,7 @@ const db = {
                 if (filters.engineerId) query = query.eq('engineer_id', filters.engineerId);
                 const { data, error } = await query;
                 if (error) throw error;
-                return data;
+                if (data) return data;
             }
             let res = localStore.sites;
             if (filters.projectId) res = res.filter(s => s.projectId === filters.projectId);
@@ -189,7 +222,7 @@ const db = {
             return res;
         },
         async create(site) {
-            const newSite = { id: `s-${Date.now()}`, ...site, createdAt: new Date() };
+            const newSite = { id: `s-${Date.now()}`, ...site, createdAt: new Date().toISOString() };
             if (supabase) {
                 const { data, error } = await supabase.from('sites').insert([{
                     project_id: site.projectId,
@@ -199,20 +232,21 @@ const db = {
                     status: site.status || 'active'
                 }]).select().single();
                 if (error) throw error;
-                return data;
+                newSite.id = data.id;
             }
             localStore.sites.push(newSite);
+            saveStore(localStore);
             return newSite;
         },
         async update(id, updates) {
             if (supabase) {
                 const { data, error } = await supabase.from('sites').update(updates).eq('id', id).select().single();
                 if (error) throw error;
-                return data;
             }
             const idx = localStore.sites.findIndex(s => s.id === id);
             if (idx === -1) return null;
-            localStore.sites[idx] = { ...localStore.sites[idx], ...updates, updatedAt: new Date() };
+            localStore.sites[idx] = { ...localStore.sites[idx], ...updates, updatedAt: new Date().toISOString() };
+            saveStore(localStore);
             return localStore.sites[idx];
         }
     },
@@ -226,7 +260,7 @@ const db = {
                 if (filters.assignedTo) query = query.eq('assigned_to', filters.assignedTo);
                 const { data, error } = await query;
                 if (error) throw error;
-                return data;
+                if (data) return data;
             }
             let res = localStore.tasks;
             if (filters.siteId) res = res.filter(t => t.siteId === filters.siteId);
@@ -234,7 +268,7 @@ const db = {
             return res;
         },
         async create(task) {
-            const newTask = { id: `t-${Date.now()}`, ...task, createdAt: new Date() };
+            const newTask = { id: `t-${Date.now()}`, ...task, createdAt: new Date().toISOString() };
             if (supabase) {
                 const { data, error } = await supabase.from('tasks').insert([{
                     site_id: task.siteId,
@@ -246,20 +280,21 @@ const db = {
                     deadline: task.deadline
                 }]).select().single();
                 if (error) throw error;
-                return data;
+                newTask.id = data.id;
             }
             localStore.tasks.push(newTask);
+            saveStore(localStore);
             return newTask;
         },
         async update(id, updates) {
             if (supabase) {
                 const { data, error } = await supabase.from('tasks').update(updates).eq('id', id).select().single();
                 if (error) throw error;
-                return data;
             }
             const idx = localStore.tasks.findIndex(t => t.id === id);
             if (idx === -1) return null;
-            localStore.tasks[idx] = { ...localStore.tasks[idx], ...updates, updatedAt: new Date() };
+            localStore.tasks[idx] = { ...localStore.tasks[idx], ...updates, updatedAt: new Date().toISOString() };
+            saveStore(localStore);
             return localStore.tasks[idx];
         }
     },
@@ -270,12 +305,12 @@ const db = {
             if (supabase) {
                 const { data, error } = await supabase.from('materials').select('*').eq('project_id', projectId);
                 if (error) throw error;
-                return data;
+                if (data) return data;
             }
             return localStore.materials.filter(m => m.projectId === projectId);
         },
         async create(material) {
-            const newMat = { id: `m-${Date.now()}`, ...material, createdAt: new Date() };
+            const newMat = { id: `m-${Date.now()}`, ...material, createdAt: new Date().toISOString() };
             if (supabase) {
                 const { data, error } = await supabase.from('materials').insert([{
                     project_id: material.projectId,
@@ -286,9 +321,10 @@ const db = {
                     total_cost: material.totalCost
                 }]).select().single();
                 if (error) throw error;
-                return data;
+                newMat.id = data.id;
             }
             localStore.materials.push(newMat);
+            saveStore(localStore);
             return newMat;
         }
     },
@@ -299,12 +335,12 @@ const db = {
             if (supabase) {
                 const { data, error } = await supabase.from('brick_estimations').select('*').eq('project_id', projectId);
                 if (error) throw error;
-                return data;
+                if (data) return data;
             }
             return localStore.brickEstimations.filter(be => be.projectId === projectId);
         },
         async create(estimation) {
-            const newBe = { id: `be-${Date.now()}`, ...estimation, createdAt: new Date() };
+            const newBe = { id: `be-${Date.now()}`, ...estimation, createdAt: new Date().toISOString() };
             if (supabase) {
                 const { data, error } = await supabase.from('brick_estimations').insert([{
                     project_id: estimation.projectId,
@@ -316,9 +352,10 @@ const db = {
                     bricks_needed: estimation.bricksNeeded
                 }]).select().single();
                 if (error) throw error;
-                return data;
+                newBe.id = data.id;
             }
             localStore.brickEstimations.push(newBe);
+            saveStore(localStore);
             return newBe;
         }
     },
@@ -329,12 +366,12 @@ const db = {
             if (supabase) {
                 const { data, error } = await supabase.from('cost_estimations').select('*').eq('project_id', projectId);
                 if (error) throw error;
-                return data;
+                if (data) return data;
             }
             return localStore.costEstimations.filter(ce => ce.projectId === projectId);
         },
         async create(estimation) {
-            const newCe = { id: `ce-${Date.now()}`, ...estimation, createdAt: new Date() };
+            const newCe = { id: `ce-${Date.now()}`, ...estimation, createdAt: new Date().toISOString() };
             if (supabase) {
                 const { data, error } = await supabase.from('cost_estimations').insert([{
                     project_id: estimation.projectId,
@@ -345,9 +382,10 @@ const db = {
                     total_estimated_cost: estimation.totalEstimatedCost
                 }]).select().single();
                 if (error) throw error;
-                return data;
+                newCe.id = data.id;
             }
             localStore.costEstimations.push(newCe);
+            saveStore(localStore);
             return newCe;
         }
     },
@@ -358,12 +396,12 @@ const db = {
             if (supabase) {
                 const { data, error } = await supabase.from('documents').select('*').eq('project_id', projectId);
                 if (error) throw error;
-                return data;
+                if (data) return data;
             }
             return localStore.documents.filter(d => d.projectId === projectId);
         },
         async create(document) {
-            const newDoc = { id: `d-${Date.now()}`, ...document, createdAt: new Date() };
+            const newDoc = { id: `d-${Date.now()}`, ...document, createdAt: new Date().toISOString() };
             if (supabase) {
                 const { data, error } = await supabase.from('documents').insert([{
                     project_id: document.projectId,
@@ -373,9 +411,10 @@ const db = {
                     uploaded_by: document.uploadedBy
                 }]).select().single();
                 if (error) throw error;
-                return data;
+                newDoc.id = data.id;
             }
             localStore.documents.push(newDoc);
+            saveStore(localStore);
             return newDoc;
         }
     },
@@ -386,12 +425,12 @@ const db = {
             if (supabase) {
                 const { data, error } = await supabase.from('chat_messages').select('*').eq('project_id', projectId).order('created_at', { ascending: true });
                 if (error) throw error;
-                return data;
+                if (data) return data;
             }
             return localStore.chatMessages.filter(msg => msg.projectId === projectId);
         },
         async create(message) {
-            const newMsg = { id: `msg-${Date.now()}`, ...message, createdAt: new Date() };
+            const newMsg = { id: `msg-${Date.now()}`, ...message, createdAt: new Date().toISOString() };
             if (supabase) {
                 const { data, error } = await supabase.from('chat_messages').insert([{
                     project_id: message.projectId,
@@ -400,9 +439,10 @@ const db = {
                     file_url: message.fileUrl
                 }]).select().single();
                 if (error) throw error;
-                return data;
+                newMsg.id = data.id;
             }
             localStore.chatMessages.push(newMsg);
+            saveStore(localStore);
             return newMsg;
         }
     }

@@ -21,16 +21,16 @@ const TeamChat = () => {
         if (data.length > 0) setSelectedProjectId(data[0].id);
       }
     } catch (err) {
-      setProjects([
-        { id: "p-1", name: "Apex Commercial Tower" },
-        { id: "p-2", name: "Riverview Residential Complex" }
-      ]);
-      setSelectedProjectId("p-1");
+      setProjects([]);
+      setSelectedProjectId('');
     }
   };
 
   const fetchChatHistory = async () => {
-    if (!selectedProjectId) return;
+    if (!selectedProjectId) {
+      setMessages([]);
+      return;
+    }
     try {
       const res = await fetch(`${apiBaseUrl}/chat/project/${selectedProjectId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -40,13 +40,7 @@ const TeamChat = () => {
         setMessages(data);
       }
     } catch (err) {
-      // Mock chat messages fallback scoped by project
-      const allMockMessages = [
-        { id: "msg-1", projectId: "p-1", senderId: "u-2", senderName: "Sarah Engineer", messageText: "Excavation for Site A is completed. We are starting steel rebar assembly tomorrow.", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
-        { id: "msg-2", projectId: "p-1", senderId: "u-3", senderName: "Robert Client", messageText: "Excellent progress. Keep me posted on the concrete pour metrics.", createdAt: new Date(Date.now() - 1000 * 60 * 60 * 1).toISOString() },
-        { id: "msg-3", projectId: "p-2", senderId: "u-4", senderName: "Mark Contractor", messageText: "Boundary clearances completed. Local site hut is being deployed today.", createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() }
-      ];
-      setMessages(allMockMessages.filter(msg => msg.projectId === selectedProjectId));
+      setMessages([]);
     }
   };
 

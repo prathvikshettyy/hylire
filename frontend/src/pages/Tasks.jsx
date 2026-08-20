@@ -69,24 +69,15 @@ const Tasks = () => {
         setTeam(data.filter(u => u.role !== 'client'));
       }
     } catch (err) {
-      console.warn('API down. Initializing offline variables.');
-      const fallbackProjects = [
-        { id: "p-1", name: "Apex Commercial Tower" },
-        { id: "p-2", name: "Riverview Residential Complex" }
-      ];
-      setProjects(fallbackProjects);
-      setSites([
-        { id: "s-1", projectId: "p-1", name: "Apex Commercial Tower - Site A (Foundation)" },
-        { id: "s-2", projectId: "p-1", name: "Apex Commercial Tower - Site B (Core)" },
-        { id: "s-3", projectId: "p-2", name: "Riverview Residential Complex - Block A" }
-      ]);
+      console.warn('API down or offline mode. Starting with clean tasks list.');
+      setProjects([]);
+      setSites([]);
+      setTasks([]);
       setTeam([
         { id: "u-2", fullName: "Sarah Engineer", role: "engineer" },
         { id: "u-4", fullName: "Mark Contractor", role: "contractor" },
         { id: "u-5", fullName: "David Worker", role: "worker" }
       ]);
-      setSelectedSiteId("s-1");
-      setSiteId("s-1");
     } finally {
       setLoading(false);
     }

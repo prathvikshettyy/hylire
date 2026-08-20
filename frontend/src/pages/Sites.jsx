@@ -46,20 +46,13 @@ const Sites = () => {
         setEngineers(data.filter(u => u.role === 'engineer' || u.role === 'contractor'));
       }
     } catch (err) {
-      console.warn('API connection failed. Seeding offline data.');
-      // Local fallback data
-      setProjects([
-        { id: "p-1", name: "Apex Commercial Tower" },
-        { id: "p-2", name: "Riverview Residential Complex" }
-      ]);
-      setSites([
-        { id: "s-1", projectId: "p-1", name: "Apex Site A - Foundation", address: "102 Main St, Sector 4", engineerId: "u-2", status: "active" },
-        { id: "s-2", projectId: "p-1", name: "Apex Site B - Structural Core", address: "104 Main St, Sector 4", engineerId: "u-2", status: "active" },
-        { id: "s-3", projectId: "p-2", name: "Riverview Block A", address: "40 Riverdale Rd", engineerId: "u-4", status: "active" }
-      ]);
+      console.warn('API connection failed or offline mode. Starting with clean sites list.');
+      // Local fallback data (empty state)
+      setProjects([]);
+      setSites([]);
       setEngineers([
-        { id: "u-2", fullName: "Sarah Engineer" },
-        { id: "u-4", fullName: "Mark Contractor" }
+        { id: "u-2", fullName: "Sarah Engineer", role: "engineer" },
+        { id: "u-4", fullName: "Mark Contractor", role: "contractor" }
       ]);
     } finally {
       setLoading(false);
