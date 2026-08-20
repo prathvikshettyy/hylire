@@ -39,6 +39,14 @@
       "fullName": "David Worker",
       "role": "worker",
       "createdAt": "2026-08-20T13:55:37.455Z"
+    },
+    {
+      "id": "u-1787245735845",
+      "email": "prathvik.a.shetty1@gmail.com",
+      "password": "Shetty@2007",
+      "fullName": "Prathvik A  Shetty",
+      "role": "builder",
+      "createdAt": "2026-08-20T17:08:55.845Z"
     }
   ],
   "projects": [

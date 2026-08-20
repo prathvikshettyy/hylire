@@ -22,7 +22,7 @@ const Navigation = () => {
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/projects', label: 'Projects', icon: FolderKanban },
     { path: '/sites', label: 'Construction Sites', icon: HardHat },
-    { path: '/tasks', label: 'Tasks (Kanban)', icon: CheckSquare },
+    { path: '/tasks', label: 'Tasks', icon: CheckSquare },
     { path: '/calculators', label: 'Estimator tools', icon: Calculator },
     { path: '/documents', label: 'Document Vault', icon: FileText },
     { path: '/chat', label: 'Team Collaboration', icon: MessageSquare },

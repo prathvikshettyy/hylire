@@ -310,7 +310,7 @@ const db = {
             return localStore.materials.filter(m => m.projectId === projectId);
         },
         async create(material) {
-            const newMat = { id: `m-${Date.now()}`, ...material, createdAt: new Date().toISOString() };
+            const newMat = { id: `m-${Date.now()}-${Math.floor(Math.random()*1000)}`, ...material, createdAt: new Date().toISOString() };
             if (supabase) {
                 const { data, error } = await supabase.from('materials').insert([{
                     project_id: material.projectId,
@@ -326,6 +326,17 @@ const db = {
             localStore.materials.push(newMat);
             saveStore(localStore);
             return newMat;
+        },
+        async delete(id) {
+            if (supabase) {
+                const { error } = await supabase.from('materials').delete().eq('id', id);
+                if (error) throw error;
+            }
+            const idx = localStore.materials.findIndex(m => m.id === id);
+            if (idx === -1) return false;
+            localStore.materials.splice(idx, 1);
+            saveStore(localStore);
+            return true;
         }
     },
 
@@ -357,6 +368,17 @@ const db = {
             localStore.brickEstimations.push(newBe);
             saveStore(localStore);
             return newBe;
+        },
+        async delete(id) {
+            if (supabase) {
+                const { error } = await supabase.from('brick_estimations').delete().eq('id', id);
+                if (error) throw error;
+            }
+            const idx = localStore.brickEstimations.findIndex(be => be.id === id);
+            if (idx === -1) return false;
+            localStore.brickEstimations.splice(idx, 1);
+            saveStore(localStore);
+            return true;
         }
     },
 
@@ -387,6 +409,17 @@ const db = {
             localStore.costEstimations.push(newCe);
             saveStore(localStore);
             return newCe;
+        },
+        async delete(id) {
+            if (supabase) {
+                const { error } = await supabase.from('cost_estimations').delete().eq('id', id);
+                if (error) throw error;
+            }
+            const idx = localStore.costEstimations.findIndex(ce => ce.id === id);
+            if (idx === -1) return false;
+            localStore.costEstimations.splice(idx, 1);
+            saveStore(localStore);
+            return true;
         }
     },
 
