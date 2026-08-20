@@ -433,6 +433,14 @@ const db = {
             }
             return localStore.documents.filter(d => d.projectId === projectId);
         },
+        async findById(id) {
+            if (supabase) {
+                const { data, error } = await supabase.from('documents').select('*').eq('id', id).single();
+                if (error) throw error;
+                if (data) return data;
+            }
+            return localStore.documents.find(d => d.id === id);
+        },
         async create(document) {
             const newDoc = { id: `d-${Date.now()}`, ...document, createdAt: new Date().toISOString() };
             if (supabase) {
@@ -441,6 +449,8 @@ const db = {
                     name: document.name,
                     file_url: document.fileUrl,
                     file_type: document.fileType,
+                    file_size: document.fileSize,
+                    category: document.category,
                     uploaded_by: document.uploadedBy
                 }]).select().single();
                 if (error) throw error;
@@ -449,6 +459,17 @@ const db = {
             localStore.documents.push(newDoc);
             saveStore(localStore);
             return newDoc;
+        },
+        async delete(id) {
+            if (supabase) {
+                const { error } = await supabase.from('documents').delete().eq('id', id);
+                if (error) throw error;
+            }
+            const idx = localStore.documents.findIndex(d => d.id === id);
+            if (idx === -1) return false;
+            localStore.documents.splice(idx, 1);
+            saveStore(localStore);
+            return true;
         }
     },
 
