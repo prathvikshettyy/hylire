@@ -271,7 +271,7 @@ const Documents = () => {
       )}
 
       {/* Main Grid: Upload Sidebar + Document Browser */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: 24, alignItems: 'flex-start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2.2fr', gap: 24, alignItems: 'flex-start' }}>
         
         {/* Real File Upload Card */}
         <div className="card">

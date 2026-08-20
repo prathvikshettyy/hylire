@@ -151,7 +151,7 @@ const Dashboard = () => {
       </div>
 
       {/* VISUAL GRAPH ROW 1: Monthly Expenditure Trend & Project Budget Comparison */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: 24, marginTop: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, marginTop: 8 }}>
         {/* GRAPH 1: SVG Expenditure Line / Area Trend Chart */}
         <div className="card" style={{ position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
