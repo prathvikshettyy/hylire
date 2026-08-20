@@ -231,13 +231,13 @@ const Tasks = () => {
 
   return (
     <div className="main-view">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
         <div>
           <h1 className="header-title" style={{ fontSize: '2rem' }}>Task Board</h1>
           <p style={{ color: 'var(--text-muted)' }}>Organize daily operations and manage workforce checklists</p>
         </div>
         
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {/* Site Selector dropdown */}
           <select 
             className="form-select"

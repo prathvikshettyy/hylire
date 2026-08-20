@@ -59,7 +59,7 @@ const UserProfile = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24 }}>
         {/* User Card info */}
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 24, padding: 32 }}>
+        <div className="card" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 20, padding: '24px 20px' }}>
           <div style={{
             width: 72,
             height: 72,

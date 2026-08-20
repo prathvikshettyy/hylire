@@ -106,7 +106,7 @@ const TeamChat = () => {
 
   return (
     <div className="main-view">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
         <div>
           <h1 className="header-title" style={{ fontSize: '2rem' }}>Collaboration Desk</h1>
           <p style={{ color: 'var(--text-muted)' }}>Project-wide team instant messenger and sharing platform</p>
@@ -124,7 +124,7 @@ const TeamChat = () => {
         </select>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: 24 }}>
         {/* Main Chat Panel */}
         <div className="chat-container">
           {/* Header */}

@@ -123,7 +123,7 @@ const Projects = () => {
 
   return (
     <div className="main-view">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
         <div>
           <h1 className="header-title" style={{ fontSize: '2rem' }}>Projects Portfolio</h1>
           <p style={{ color: 'var(--text-muted)' }}>Overview of construction projects and financials</p>
@@ -223,7 +223,7 @@ const Projects = () => {
           </form>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: 24 }}>
           {projects.map((project) => (
             <div key={project.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 16 }}>
               <div>

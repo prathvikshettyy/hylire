@@ -47,7 +47,7 @@ const AppLayout = ({ children }) => {
 
       {/* Main Content Area */}
       <div className="app-content">
-        <header className="header">
+        <header className="header desktop-only-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '4px 10px', borderRadius: 12 }}>
               Secure Network Status: Online

@@ -60,6 +60,17 @@
       "endDate": "",
       "status": "planning",
       "createdAt": "2026-08-20T13:57:13.561Z"
+    },
+    {
+      "id": "p-1787248849966",
+      "name": "dsvv",
+      "description": "",
+      "clientId": null,
+      "budget": 300000000,
+      "startDate": "",
+      "endDate": "",
+      "status": "planning",
+      "createdAt": "2026-08-20T18:00:49.966Z"
     }
   ],
   "sites": [
@@ -70,9 +81,30 @@
       "address": "Primary Project Site",
       "status": "active",
       "createdAt": "2026-08-20T13:57:13.564Z"
+    },
+    {
+      "id": "s-1787248849969",
+      "projectId": "p-1787248849966",
+      "name": "dsvv - Main Site",
+      "address": "Primary Project Site",
+      "status": "active",
+      "createdAt": "2026-08-20T18:00:49.969Z"
     }
   ],
-  "tasks": [],
+  "tasks": [
+    {
+      "id": "t-1787248732082",
+      "siteId": "s-1787234233564",
+      "name": "vdf",
+      "description": "",
+      "assignedTo": "u-4",
+      "status": "done",
+      "priority": "medium",
+      "deadline": null,
+      "createdAt": "2026-08-20T17:58:52.082Z",
+      "updatedAt": "2026-08-20T17:58:57.368Z"
+    }
+  ],
   "materials": [
     {
       "id": "m-1787247535614-113",
@@ -160,6 +192,18 @@
     }
   ],
   "costEstimations": [],
-  "documents": [],
+  "documents": [
+    {
+      "id": "d-1787248438881",
+      "projectId": "p-1787234233561",
+      "name": "Hylire documentation (1).docx (3).pdf",
+      "fileUrl": "http://localhost:5000/uploads/documents/1787248438877_Hylire_documentation__1_.docx__3_.pdf",
+      "fileType": "application/pdf",
+      "fileSize": "409.72 KB",
+      "category": "Blueprints",
+      "uploadedBy": "Prathvik A  Shetty",
+      "createdAt": "2026-08-20T17:53:58.881Z"
+    }
+  ],
   "chatMessages": []
 }

@@ -139,7 +139,7 @@ const Sites = () => {
 
   return (
     <div className="main-view">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
         <div>
           <h1 className="header-title" style={{ fontSize: '2rem' }}>Construction Sites</h1>
           <p style={{ color: 'var(--text-muted)' }}>Monitor safety, workforce and operational status per site</p>
@@ -219,7 +219,7 @@ const Sites = () => {
           </form>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: 24 }}>
           {sites.map((site) => (
             <div key={site.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
