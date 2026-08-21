@@ -12,7 +12,12 @@ import {
   Sparkles, 
   ArrowRight,
   TrendingUp,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Ruler,
+  Grid,
+  Shield,
+  Download,
+  Building
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { localProjects, localEstimations } from '../utils/localStore';
@@ -28,87 +33,90 @@ const Calculators = () => {
   const [saveSuccess, setSaveSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // 1. Brick form inputs & outputs
+  // 1. Brickwork & Masonry States
+  const [masonryType, setMasonryType] = useState('clay');
   const [wallLength, setWallLength] = useState('50');
   const [wallHeight, setWallHeight] = useState('10');
   const [wallThickness, setWallThickness] = useState('9'); // inches
+  const [doorDeductions, setDoorDeductions] = useState('42'); // sq ft (e.g. 2 doors 3x7)
+  const [windowDeductions, setWindowDeductions] = useState('48'); // sq ft (e.g. 3 windows 4x4)
+  const [mortarRatio, setMortarRatio] = useState('1:6');
   const [wastagePercent, setWastagePercent] = useState('10');
   const [brickUnitPrice, setBrickUnitPrice] = useState('8.50');
   const [brickResult, setBrickResult] = useState(null);
 
-  // 2. Concrete Materials inputs & outputs
+  // 2. Concrete & RCC Materials States
   const [concreteStructureType, setConcreteStructureType] = useState('slab');
   const [concreteLength, setConcreteLength] = useState('40');
   const [concreteWidth, setConcreteWidth] = useState('30');
   const [concreteDepth, setConcreteDepth] = useState('5'); // inches
   const [concreteVol, setConcreteVol] = useState('500');
   const [concreteGrade, setConcreteGrade] = useState('M20');
-  const [steelPercent, setSteelPercent] = useState('1.5');
+  const [steelPercent, setSteelPercent] = useState('1.2');
   const [cementPrice, setCementPrice] = useState('380');
   const [sandPrice, setSandPrice] = useState('45');
   const [aggregatePrice, setAggregatePrice] = useState('55');
   const [steelPrice, setSteelPrice] = useState('65');
   const [matResult, setMatResult] = useState(null);
 
-  // 3. Plastering inputs & outputs
+  // 3. Plastering & Tiling States
   const [plasterArea, setPlasterArea] = useState('1200');
   const [plasterThickness, setPlasterThickness] = useState('12'); // mm
   const [plasterMix, setPlasterMix] = useState('1:4');
   const [plasterResult, setPlasterResult] = useState(null);
 
-  // 4. Overall BOQ & Cost inputs & outputs
+  const [tileFloorArea, setTileFloorArea] = useState('850');
+  const [tileSize, setTileSize] = useState('2x2'); // '2x2', '2x4', '1x1'
+  const [tileBoxPrice, setTileBoxPrice] = useState('850');
+  const [tileResult, setTileResult] = useState(null);
+
+  // 4. Steel BBS & Rebar Weight States
+  const [steelBarDia, setSteelBarDia] = useState('12');
+  const [steelLengthMeters, setSteelLengthMeters] = useState('120');
+  const [steelNumBars, setSteelNumBars] = useState('24');
+  const [steelRatePerKg, setSteelRatePerKg] = useState('65');
+  const [steelBBSResult, setSteelBBSResult] = useState(null);
+
+  // 5. Overall BOQ & Building Cost States
   const [builtUpArea, setBuiltUpArea] = useState('1800');
+  const [floorsCount, setFloorsCount] = useState('2');
   const [qualityTier, setQualityTier] = useState('standard');
-  const [materialCost, setMaterialCost] = useState('1500000');
-  const [laborCost, setLaborCost] = useState('600000');
-  const [transportCost, setTransportCost] = useState('120000');
-  const [miscCost, setMiscCost] = useState('100000');
   const [costResult, setCostResult] = useState(null);
 
-  // 5. Saved Estimations History
+  // 6. Saved Estimations History
   const [savedEstimates, setSavedEstimates] = useState(() => {
     const list = localProjects.list();
     return list.length > 0 ? localEstimations.listByProject(list[0].id) : { bricks: [], materials: [], costs: [] };
   });
 
-  // Load projects list
+  // Sync projects list
   const fetchProjects = async () => {
     const localP = localProjects.list();
     setProjects(localP);
     if (localP.length > 0 && !projectId) {
       setProjectId(localP[0].id);
     }
-
     try {
-      const res = await fetch(`${apiBaseUrl}/projects`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await fetch(`${apiBaseUrl}/projects`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         if (data?.length > 0) setProjects(data);
       }
-    } catch (err) {
-      // Offline mode
-    }
+    } catch (e) {}
   };
 
-  // Fetch saved project estimates
+  // Sync saved project estimates
   const fetchSavedEstimates = async (pId) => {
     if (!pId) return;
     const localE = localEstimations.listByProject(pId);
     setSavedEstimates(localE);
-
     try {
-      const res = await fetch(`${apiBaseUrl}/estimation/project/${pId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await fetch(`${apiBaseUrl}/estimation/project/${pId}`, { headers: { 'Authorization': `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         if (data) setSavedEstimates(data);
       }
-    } catch (err) {
-      // Offline mode
-    }
+    } catch (e) {}
   };
 
   useEffect(() => {
@@ -121,207 +129,308 @@ const Calculators = () => {
     }
   }, [projectId, token]);
 
-  // Handle Concrete dimensions helper calculation
+  // Dimension Helper for concrete
   useEffect(() => {
-    if (concreteStructureType === 'slab' && concreteLength && concreteWidth && concreteDepth) {
+    if (concreteLength && concreteWidth && concreteDepth) {
       const vol = parseFloat(concreteLength) * parseFloat(concreteWidth) * (parseFloat(concreteDepth) / 12);
       setConcreteVol(vol.toFixed(1));
     }
-  }, [concreteStructureType, concreteLength, concreteWidth, concreteDepth]);
+  }, [concreteLength, concreteWidth, concreteDepth]);
 
-  // 1. Brick calculation call
+  // Run initial calculations on mount
+  useEffect(() => {
+    calculateBricks();
+    calculateMaterials();
+    calculatePlaster();
+    calculateTiling();
+    calculateSteelBBS();
+    calculateCost();
+  }, []);
+
+  // 1. Calculate Brickwork & Masonry
   const calculateBricks = async (e) => {
     if (e) e.preventDefault();
     setSaveSuccess('');
     setLoading(true);
 
-    const payload = {
-      length: parseFloat(wallLength),
-      height: parseFloat(wallHeight),
-      thickness: parseFloat(wallThickness),
-      wastage: parseFloat(wastagePercent),
-      brickUnitPrice: parseFloat(brickUnitPrice),
-      projectId: projectId || null
+    const l = parseFloat(wallLength) || 0;
+    const h = parseFloat(wallHeight) || 0;
+    const t = parseFloat(wallThickness) || 9;
+    const waste = parseFloat(wastagePercent) || 10;
+    const grossArea = l * h;
+    const deductions = (parseFloat(doorDeductions) || 0) + (parseFloat(windowDeductions) || 0);
+    const netArea = Math.max(1, grossArea - deductions);
+    const wallVol = netArea * (t / 12);
+
+    let bL = 9, bW = 4.5, bH = 3;
+    if (masonryType === 'flyash') { bL = 9; bW = 4; bH = 3; }
+    else if (masonryType === 'aac') { bL = 23.6; bW = 8; bH = 8; }
+    else if (masonryType === 'solidblock') { bL = 16; bW = 8; bH = 8; }
+
+    const singleBrickVolFt = (bL * bW * bH) / 1728;
+    const singleBrickWithMortarFt = ((bL + 0.5) * (bW + 0.5) * (bH + 0.5)) / 1728;
+    const baseBricks = Math.ceil(wallVol / singleBrickWithMortarFt);
+    const wasteUnits = Math.ceil(baseBricks * (waste / 100));
+    const totalUnits = baseBricks + wasteUnits;
+
+    const wetMortar = Math.max(0, wallVol - (baseBricks * singleBrickVolFt));
+    const dryMortar = wetMortar * 1.33;
+    const parts = mortarRatio === '1:4' ? 5 : (mortarRatio === '1:5' ? 6 : 7);
+    const cementCuFt = dryMortar * (1 / parts);
+    const sandCuFt = dryMortar * ((parts - 1) / parts);
+    const cementBags = Math.ceil(cementCuFt / 1.25);
+    const sandTons = parseFloat(((sandCuFt * 45) / 1000).toFixed(2));
+
+    const brickCost = totalUnits * parseFloat(brickUnitPrice || 8.5);
+    const cementCost = cementBags * 380;
+    const sandCost = Math.ceil(sandCuFt) * 45;
+    const totalCost = brickCost + cementCost + sandCost;
+
+    const resData = {
+      masonryType,
+      grossArea,
+      deductions,
+      netAreaSqFt: parseFloat(netArea.toFixed(1)),
+      wallVolumeCuFt: parseFloat(wallVol.toFixed(1)),
+      bricksNeeded: totalUnits,
+      baseBricks,
+      wastageBricks: wasteUnits,
+      cementBags,
+      sandCuFt: Math.ceil(sandCuFt),
+      sandTons,
+      brickCost,
+      cementCost,
+      sandCost,
+      totalEstimatedCost: totalCost,
+      calculationSteps: [
+        `Gross wall area: ${grossArea} sq ft - Openings (${deductions} sq ft) = Net: ${netArea.toFixed(1)} sq ft`,
+        `Net volume: ${wallVol.toFixed(1)} cu ft (Thickness: ${t} inches)`,
+        `Selected: ${masonryType.toUpperCase()} units (${bL}" × ${bW}" × ${bH}")`,
+        `Required units: ${baseBricks} + ${waste}% waste (${wasteUnits}) = ${totalUnits} units`,
+        `Mortar (${mortarRatio} mix): ${cementBags} Cement bags + ${Math.ceil(sandCuFt)} cft Sand (${sandTons} Ton)`
+      ]
     };
 
-    try {
-      const res = await fetch(`${apiBaseUrl}/estimation/bricks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setBrickResult(data);
-        if (projectId) {
-          setSaveSuccess('Brick & mortar estimation saved permanently to project database!');
-          fetchSavedEstimates(projectId);
-        }
-      }
-    } catch (err) {
-      // Local fallback calculation
-      const l = parseFloat(wallLength);
-      const h = parseFloat(wallHeight);
-      const t = parseFloat(wallThickness);
-      const wallVol = l * h * (t / 12);
-      const singleBrickVolFt = (9.5 * 5 * 3.5) / 1728;
-      const baseBricks = Math.ceil(wallVol / singleBrickVolFt);
-      const waste = Math.ceil(baseBricks * (parseFloat(wastagePercent) / 100));
-      const total = baseBricks + waste;
-      const wetMortar = wallVol - (baseBricks * (9 * 4.5 * 3) / 1728);
-      const dryMortar = wetMortar * 1.33;
-      const cementBags = Math.ceil((dryMortar * (1/7)) / 1.25);
-      const sandCft = Math.ceil(dryMortar * (6/7));
-      const cost = (total * parseFloat(brickUnitPrice)) + (cementBags * 380) + (sandCft * 45);
-
-      setBrickResult({
-        wallVolumeCuFt: parseFloat(wallVol.toFixed(2)),
-        bricksNeeded: total,
-        baseBricks,
-        wastageBricks: waste,
-        wetMortarVolumeCuFt: parseFloat(wetMortar.toFixed(2)),
-        dryMortarVolumeCuFt: parseFloat(dryMortar.toFixed(2)),
-        cementBags,
-        sandCuFt: sandCft,
-        brickCost: total * parseFloat(brickUnitPrice),
-        cementCost: cementBags * 380,
-        sandCost: sandCft * 45,
-        totalEstimatedCost: cost,
-        calculationSteps: [
-          `Wall volume calculated: ${wallVol.toFixed(2)} cu ft (L: ${l} ft, H: ${h} ft, T: ${t} in)`,
-          `Base bricks needed: ${baseBricks} units`,
-          `Wastage offset (+${wastagePercent}%): ${waste} units`,
-          `Mortar mix required (1:6): ${cementBags} Cement bags + ${sandCft} cu ft Sand`
-        ]
-      });
-    } finally {
-      setLoading(false);
+    setBrickResult(resData);
+    if (projectId) {
+      localEstimations.saveBrick({ projectId, ...resData });
+      setSaveSuccess('Brick & mortar estimation archived in project database!');
+      fetchSavedEstimates(projectId);
     }
+    setLoading(false);
   };
 
-  // 2. Concrete Materials calculation call
+  // 2. Calculate Concrete & RCC Materials
   const calculateMaterials = async (e) => {
     if (e) e.preventDefault();
     setSaveSuccess('');
     setLoading(true);
 
-    const payload = {
-      concreteVolume: parseFloat(concreteVol),
-      grade: concreteGrade,
-      steelPercent: parseFloat(steelPercent),
-      cementBagPrice: parseFloat(cementPrice),
-      sandCftPrice: parseFloat(sandPrice),
-      aggregateCftPrice: parseFloat(aggregatePrice),
-      steelKgPrice: parseFloat(steelPrice),
-      projectId: projectId || null
+    const volume = parseFloat(concreteVol) || 100;
+    const dryVolume = volume * 1.54;
+
+    const mixRatios = {
+      'M7.5': { c: 1, s: 4, a: 8, total: 13 },
+      'M10': { c: 1, s: 3, a: 6, total: 10 },
+      'M15': { c: 1, s: 2, a: 4, total: 7 },
+      'M20': { c: 1, s: 1.5, a: 3, total: 5.5 },
+      'M25': { c: 1, s: 1, a: 2, total: 4 },
+      'M30': { c: 1, s: 0.75, a: 1.5, total: 3.25 }
     };
 
-    try {
-      const res = await fetch(`${apiBaseUrl}/estimation/materials`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setMatResult(data);
-        if (projectId) {
-          setSaveSuccess('RCC material quantities and costs saved to project inventory!');
-          fetchSavedEstimates(projectId);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+    const selectedMix = mixRatios[concreteGrade] || mixRatios['M20'];
+    const cementCuFt = dryVolume * (selectedMix.c / selectedMix.total);
+    const sandCuFt = dryVolume * (selectedMix.s / selectedMix.total);
+    const aggregateCuFt = dryVolume * (selectedMix.a / selectedMix.total);
+    const cementBags = Math.ceil(cementCuFt / 1.25);
+
+    const steelRatio = parseFloat(steelPercent || 1.2) / 100;
+    const steelWeightKg = Math.ceil(volume * 0.0283168 * 7850 * steelRatio);
+    const waterLiters = cementBags * 28;
+
+    const cBagPrice = parseFloat(cementPrice || 380);
+    const sPrice = parseFloat(sandPrice || 45);
+    const aPrice = parseFloat(aggregatePrice || 55);
+    const stPrice = parseFloat(steelPrice || 65);
+
+    const materials = [
+      { name: `Cement (${concreteGrade} OPC/PPC 50kg)`, quantity: cementBags, unit: 'bags', unitCost: cBagPrice, totalCost: cementBags * cBagPrice },
+      { name: 'River Sand / M-Sand (Zone II)', quantity: Math.ceil(sandCuFt), unit: 'cu ft', unitCost: sPrice, totalCost: Math.ceil(sandCuFt) * sPrice },
+      { name: 'Coarse Aggregate (20mm Crushed Metal)', quantity: Math.ceil(aggregateCuFt), unit: 'cu ft', unitCost: aPrice, totalCost: Math.ceil(aggregateCuFt) * aPrice },
+      { name: `TMT Rebar Fe500D (${steelPercent}%)`, quantity: steelWeightKg, unit: 'kg', unitCost: stPrice, totalCost: steelWeightKg * stPrice }
+    ];
+
+    const totalCost = materials.reduce((acc, m) => acc + m.totalCost, 0);
+
+    const resData = {
+      structureType: concreteStructureType,
+      grade: concreteGrade,
+      concreteVolumeCuFt: volume,
+      concreteVolumeM3: parseFloat((volume * 0.0283168).toFixed(2)),
+      dryVolumeCuFt: parseFloat(dryVolume.toFixed(2)),
+      cementBags,
+      sandCuFt: Math.ceil(sandCuFt),
+      aggregateCuFt: Math.ceil(aggregateCuFt),
+      steelKg: steelWeightKg,
+      effectiveSteelPct: steelPercent,
+      waterLiters,
+      materials,
+      totalMaterialsCost: totalCost
+    };
+
+    setMatResult(resData);
+    if (projectId) {
+      localEstimations.saveMaterial({ projectId, ...resData });
+      setSaveSuccess('RCC materials & reinforcement saved to project records!');
+      fetchSavedEstimates(projectId);
     }
+    setLoading(false);
   };
 
-  // 3. Plastering calculation call
+  // 3. Calculate Plastering
   const calculatePlaster = async (e) => {
     if (e) e.preventDefault();
-    setSaveSuccess('');
-    setLoading(true);
+    const area = parseFloat(plasterArea) || 1000;
+    const thicknessFt = (parseFloat(plasterThickness) / 25.4) / 12;
+    const wetVol = area * thicknessFt;
+    const dryVol = wetVol * 1.33;
 
-    const payload = {
-      areaSqFt: parseFloat(plasterArea),
-      thicknessMm: parseFloat(plasterThickness),
+    const parts = plasterMix === '1:3' ? 4 : (plasterMix === '1:4' ? 5 : 7);
+    const cementCuFt = dryVol * (1 / parts);
+    const sandCuFt = dryVol * ((parts - 1) / parts);
+    const cementBags = Math.ceil(cementCuFt / 1.25);
+    const cementCost = cementBags * 380;
+    const sandCost = Math.ceil(sandCuFt) * 45;
+    const laborCost = Math.ceil(area * 18);
+
+    setPlasterResult({
+      areaSqFt: area,
+      thicknessMm: plasterThickness,
       mixRatio: plasterMix,
-      projectId: projectId || null
-    };
-
-    try {
-      const res = await fetch(`${apiBaseUrl}/estimation/plaster`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPlasterResult(data);
-        if (projectId) {
-          setSaveSuccess('Plastering estimate saved to database!');
-          fetchSavedEstimates(projectId);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      cementBags,
+      sandCuFt: Math.ceil(sandCuFt),
+      cementCost,
+      sandCost,
+      laborCost,
+      totalEstimatedCost: cementCost + sandCost + laborCost
+    });
   };
 
-  // 4. Cost BOQ calculation call
-  const calculateCosts = async (e) => {
+  // 4. Calculate Flooring & Tiling
+  const calculateTiling = async (e) => {
     if (e) e.preventDefault();
-    setSaveSuccess('');
-    setLoading(true);
+    const area = parseFloat(tileFloorArea) || 500;
+    let tArea = 4; // 2x2
+    if (tileSize === '2x4') tArea = 8;
+    if (tileSize === '1x1') tArea = 1;
 
-    const payload = {
-      projectId: projectId || null,
-      builtUpAreaSqFt: parseFloat(builtUpArea),
-      qualityTier,
-      materialCost: parseFloat(materialCost),
-      laborCost: parseFloat(laborCost),
-      transportCost: parseFloat(transportCost),
-      miscCost: parseFloat(miscCost)
+    const baseTiles = Math.ceil(area / tArea);
+    const wasteTiles = Math.ceil(baseTiles * 0.08); // 8% waste
+    const totalTiles = baseTiles + wasteTiles;
+    const tilesPerBox = tileSize === '2x4' ? 2 : 4;
+    const boxes = Math.ceil(totalTiles / tilesPerBox);
+    const tileCost = boxes * parseFloat(tileBoxPrice || 850);
+    const adhesiveBags = Math.ceil(area / 40);
+    const adhesiveCost = adhesiveBags * 350;
+    const groutKg = Math.ceil(area / 60);
+    const groutCost = groutKg * 80;
+    const laborCost = Math.ceil(area * 24);
+
+    setTileResult({
+      areaSqFt: area,
+      tileSize,
+      boxes,
+      totalTiles,
+      adhesiveBags,
+      groutKg,
+      tileCost,
+      adhesiveCost,
+      groutCost,
+      laborCost,
+      totalEstimatedCost: tileCost + adhesiveCost + groutCost + laborCost
+    });
+  };
+
+  // 5. Calculate Steel BBS
+  const calculateSteelBBS = async (e) => {
+    if (e) e.preventDefault();
+    const d = parseFloat(steelBarDia) || 12;
+    const len = parseFloat(steelLengthMeters) || 100;
+    const count = parseInt(steelNumBars) || 1;
+    const unitWeight = (d * d) / 162.2;
+    const totalKg = parseFloat((unitWeight * len * count).toFixed(2));
+    const totalTons = parseFloat((totalKg / 1000).toFixed(3));
+    const bindingWireKg = Math.max(1, Math.ceil(totalTons * 10));
+    const steelCost = totalKg * parseFloat(steelRatePerKg || 65);
+    const bindingWireCost = bindingWireKg * 90;
+
+    setSteelBBSResult({
+      barDiameterMm: d,
+      totalLengthMeters: len,
+      numberOfBars: count,
+      unitWeightKgPerM: parseFloat(unitWeight.toFixed(3)),
+      totalWeightKg: totalKg,
+      totalWeightTons: totalTons,
+      bindingWireKg,
+      steelCost,
+      bindingWireCost,
+      totalCost: steelCost + bindingWireCost
+    });
+  };
+
+  // 6. Calculate Building BOQ & Budget
+  const calculateCost = async (e) => {
+    if (e) e.preventDefault();
+    const area = parseFloat(builtUpArea) || 1500;
+    const floors = parseInt(floorsCount) || 1;
+    const totalArea = area * floors;
+
+    const rateCards = {
+      'economy': 1600,
+      'standard': 2100,
+      'premium': 2850,
+      'luxury': 3800
     };
 
-    try {
-      const res = await fetch(`${apiBaseUrl}/estimation/cost`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCostResult(data);
-        if (projectId) {
-          setSaveSuccess('Building BOQ financial model saved to project database!');
-          fetchSavedEstimates(projectId);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+    const baseRate = rateCards[qualityTier] || 2100;
+    const totalBudget = totalArea * baseRate;
+
+    const phases = [
+      { phase: '1. Site Clearance & Earthwork', percent: 4, cost: totalBudget * 0.04 },
+      { phase: '2. Substructure & Foundation (RCC)', percent: 14, cost: totalBudget * 0.14 },
+      { phase: '3. Superstructure Columns & Slabs', percent: 22, cost: totalBudget * 0.22 },
+      { phase: '4. Brickwork & Masonry Partitions', percent: 13, cost: totalBudget * 0.13 },
+      { phase: '5. Doors, Windows & Glazing', percent: 7, cost: totalBudget * 0.07 },
+      { phase: '6. Internal/External Plaster & Putty', percent: 8, cost: totalBudget * 0.08 },
+      { phase: '7. Vitrified Flooring & Wall Tiles', percent: 9, cost: totalBudget * 0.09 },
+      { phase: '8. Plumbing, Sanitation & Electrical MEP', percent: 11, cost: totalBudget * 0.11 },
+      { phase: '9. Exterior Facade & Interior Painting', percent: 7, cost: totalBudget * 0.07 },
+      { phase: '10. Final Handover, Fixtures & Misc', percent: 5, cost: totalBudget * 0.05 }
+    ];
+
+    const resData = {
+      builtUpAreaPerFloor: area,
+      floorsCount: floors,
+      totalBuiltUpArea: totalArea,
+      qualityTier,
+      ratePerSqFt: baseRate,
+      totalEstimatedBudget: totalBudget,
+      phases
+    };
+
+    setCostResult(resData);
+    if (projectId) {
+      localEstimations.saveCost({ projectId, totalEstimatedCost: totalBudget, ...resData });
+      setSaveSuccess('Building BOQ & stage budget saved to project portfolio!');
+      fetchSavedEstimates(projectId);
     }
   };
 
-  // Delete saved estimation item
-  const handleDeleteSaved = async (type, id) => {
-    if (!window.confirm('Delete this estimation from project history?')) return;
-    try {
-      const res = await fetch(`${apiBaseUrl}/estimation/${type}/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        fetchSavedEstimates(projectId);
-      }
-    } catch (err) {
-      console.error('Delete failed:', err);
-    }
+  // Delete estimate
+  const handleDeleteEstimate = (type, id) => {
+    if (!window.confirm('Delete this historical calculation?')) return;
+    localEstimations.delete(type, id);
+    if (projectId) fetchSavedEstimates(projectId);
   };
 
   const handlePrint = () => {
@@ -329,701 +438,676 @@ const Calculators = () => {
   };
 
   return (
-    <div className="main-view" style={{ maxWidth: 1280 }}>
-      {/* Header Area */}
+    <div className="main-view" style={{ maxWidth: 1360 }}>
+      {/* Top Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 className="header-title" style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Calculator size={28} color="var(--primary-color)" /> Smart Construction Estimator
+            <Calculator size={30} color="var(--primary-color)" /> Civil Engineering Estimator Suite
           </h1>
           <p style={{ color: 'var(--text-muted)' }}>
-            Civil engineering material computations, structural concrete schedules, and budget cost models
+            Real structural volume calculations, IS standard mix grades, steel bar schedules, and project BOQs
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <button onClick={handlePrint} className="btn btn-secondary" style={{ display: 'flex', gap: 6, fontSize: '0.85rem' }}>
+        {/* Project Selector & Print Export */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <select 
+            className="form-select"
+            style={{ width: 'auto', minWidth: 240 }}
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+          >
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+
+          <button 
+            onClick={handlePrint}
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
             <Printer size={16} /> Print / Export
           </button>
         </div>
       </div>
 
-      {/* Save Success Alert */}
+      {/* Success alert */}
       {saveSuccess && (
         <div style={{
           background: 'rgba(16, 185, 129, 0.15)',
           color: '#10b981',
           padding: '12px 18px',
-          borderRadius: '10px',
+          borderRadius: 10,
           fontSize: '0.88rem',
           border: '1px solid rgba(16, 185, 129, 0.3)',
           display: 'flex',
           alignItems: 'center',
           gap: 10
         }}>
-          <CheckCircle2 size={18} />
-          <span>{saveSuccess}</span>
+          <CheckCircle2 size={18} /> {saveSuccess}
         </div>
       )}
 
-      {/* Target Project Link Bar */}
-      <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, padding: '16px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Target Project Link:</span>
-          <select 
-            className="form-select"
-            style={{ width: 'auto', minWidth: 280, padding: '8px 12px' }}
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-          >
-            <option value="">Standalone Calculation (Do not link to project)</option>
-            {projects.map(p => (
-              <option key={p.id} value={p.id}>{p.name} ({p.status || 'Active'})</option>
-            ))}
-          </select>
-        </div>
-
-        {projectId && (
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', padding: '6px 12px', borderRadius: 8, border: '1px solid var(--border-color)' }}>
-            Auto-saving all computations to project vault
-          </span>
-        )}
+      {/* Tool Navigation Tabs */}
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 6, borderBottom: '1px solid var(--border-color)' }}>
+        {[
+          { id: 'bricks', label: '1. Brickwork & Masonry', icon: BrickWall },
+          { id: 'concrete', label: '2. Concrete & RCC Structure', icon: Layers },
+          { id: 'finishing', label: '3. Plaster & Tiles', icon: Paintbrush },
+          { id: 'steel', label: '4. Steel Bar Bending (BBS)', icon: Ruler },
+          { id: 'boq', label: '5. Building BOQ & Budget', icon: Building },
+          { id: 'vault', label: '6. Saved Vault History', icon: FolderClock }
+        ].map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 18px',
+                borderRadius: '12px 12px 0 0',
+                border: 'none',
+                cursor: 'pointer',
+                background: isActive ? 'rgba(234, 88, 12, 0.15)' : 'transparent',
+                color: isActive ? 'var(--primary-color)' : 'var(--text-muted)',
+                fontWeight: isActive ? 700 : 500,
+                borderBottom: isActive ? '3px solid var(--primary-color)' : '3px solid transparent',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Icon size={16} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--border-color)', paddingBottom: 10, overflowX: 'auto' }}>
-        <button 
-          onClick={() => { setActiveTab('bricks'); setSaveSuccess(''); }}
-          className={`btn ${activeTab === 'bricks' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', gap: 8, alignItems: 'center' }}
-        >
-          <BrickWall size={16} />
-          <span>1. Brickwork & Mortar</span>
-        </button>
-
-        <button 
-          onClick={() => { setActiveTab('materials'); setSaveSuccess(''); }}
-          className={`btn ${activeTab === 'materials' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', gap: 8, alignItems: 'center' }}
-        >
-          <Layers size={16} />
-          <span>2. Concrete & RCC Structure</span>
-        </button>
-
-        <button 
-          onClick={() => { setActiveTab('plaster'); setSaveSuccess(''); }}
-          className={`btn ${activeTab === 'plaster' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', gap: 8, alignItems: 'center' }}
-        >
-          <Paintbrush size={16} />
-          <span>3. Plastering & Finishing</span>
-        </button>
-
-        <button 
-          onClick={() => { setActiveTab('cost'); setSaveSuccess(''); }}
-          className={`btn ${activeTab === 'cost' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', gap: 8, alignItems: 'center' }}
-        >
-          <IndianRupee size={16} />
-          <span>4. Building BOQ & Costing</span>
-        </button>
-
-        {projectId && (
-          <button 
-            onClick={() => { setActiveTab('history'); setSaveSuccess(''); }}
-            className={`btn ${activeTab === 'history' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto' }}
-          >
-            <FolderClock size={16} />
-            <span>Saved Estimates Vault ({savedEstimates.bricks.length + savedEstimates.materials.length + savedEstimates.costs.length})</span>
-          </button>
-        )}
-      </div>
-
-      {/* TAB 1: BRICKWORK CALCULATOR */}
+      {/* TAB 1: BRICKWORK & MASONRY */}
       {activeTab === 'bricks' && (
         <div className="calc-grid">
-          {/* Input Parameters */}
           <div className="card">
-            <form onSubmit={calculateBricks}>
-              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.1rem' }}>
-                <BrickWall size={20} color="var(--primary-color)" /> Brick Masonry Dimensions
-              </h3>
+            <h3 className="card-title"><BrickWall size={18} color="var(--primary-color)" /> Wall & Masonry Parameters</h3>
+            <form onSubmit={calculateBricks} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div className="form-group">
-                  <label className="form-label">Wall Length (Feet)</label>
-                  <input 
-                    type="number" 
-                    step="any"
-                    className="form-input" 
-                    value={wallLength} 
-                    onChange={(e) => setWallLength(e.target.value)} 
-                    required 
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Wall Height (Feet)</label>
-                  <input 
-                    type="number" 
-                    step="any"
-                    className="form-input" 
-                    value={wallHeight} 
-                    onChange={(e) => setWallHeight(e.target.value)} 
-                    required 
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div className="form-group">
-                  <label className="form-label">Wall Thickness</label>
-                  <select 
-                    className="form-select"
-                    value={wallThickness}
-                    onChange={(e) => setWallThickness(e.target.value)}
-                  >
-                    <option value="4.5">4.5" (Single Leaf / Partition)</option>
-                    <option value="9">9" (Standard Load-Bearing)</option>
-                    <option value="13.5">13.5" (Heavy 1.5 Brick Wall)</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Wastage Buffer (%)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    value={wastagePercent} 
-                    onChange={(e) => setWastagePercent(e.target.value)} 
-                  />
-                </div>
-              </div>
-
               <div className="form-group">
-                <label className="form-label">Brick Unit Price (₹ / brick)</label>
-                <input 
-                  type="number" 
-                  step="0.10"
-                  className="form-input" 
-                  value={brickUnitPrice} 
-                  onChange={(e) => setBrickUnitPrice(e.target.value)} 
-                />
-              </div>
-
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '12px', marginTop: 10 }} disabled={loading}>
-                {loading ? 'Computing...' : 'Calculate Brick & Mortar Requirements'}
-              </button>
-            </form>
-          </div>
-
-          {/* Results Display */}
-          <div className="card">
-            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.1rem' }}>
-              <FileSpreadsheet size={20} color="var(--primary-color)" /> Material Bill of Quantities
-            </h3>
-
-            {brickResult ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* Highlight Metric */}
-                <div style={{ background: 'rgba(234, 88, 12, 0.1)', border: '1px solid rgba(234, 88, 12, 0.3)', padding: 18, borderRadius: 12, textAlign: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Total Bricks Required</span>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary-color)', marginTop: 4 }}>
-                    {brickResult.bricksNeeded.toLocaleString()} <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>units</span>
-                  </div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                    Base: {brickResult.baseBricks} + {brickResult.wastageBricks} breakage buffer ({wastagePercent}%)
-                  </span>
-                </div>
-
-                {/* Grid Breakdown */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                  <div style={{ padding: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 10, textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cement (1:6 Mortar)</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>{brickResult.cementBags} <span style={{ fontSize: '0.8rem' }}>bags</span></div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>₹{brickResult.cementCost?.toLocaleString()}</div>
-                  </div>
-
-                  <div style={{ padding: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 10, textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>River Sand</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>{brickResult.sandCuFt} <span style={{ fontSize: '0.8rem' }}>cft</span></div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>₹{brickResult.sandCost?.toLocaleString()}</div>
-                  </div>
-
-                  <div style={{ padding: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 10, textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Wall Net Volume</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>{brickResult.wallVolumeCuFt} <span style={{ fontSize: '0.8rem' }}>cu ft</span></div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Dry Mortar: {brickResult.dryMortarVolumeCuFt} cft</div>
-                  </div>
-                </div>
-
-                {/* Total Cost Banner */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: 10 }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Estimated Material Cost:</span>
-                  <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary-color)' }}>
-                    ₹{brickResult.totalEstimatedCost?.toLocaleString()}
-                  </span>
-                </div>
-
-                {/* Calculation Trace */}
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.2)', padding: 12, borderRadius: 8 }}>
-                  <strong>Engineering Calculation Trace:</strong>
-                  <ul style={{ paddingLeft: 16, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {brickResult.calculationSteps?.map((step, idx) => (
-                      <li key={idx}>{step}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ) : (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <BrickWall size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-                <p>Enter wall parameters on the left and click <strong>Calculate</strong> to generate full brickwork and mortar estimates.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: CONCRETE & RCC CALCULATOR */}
-      {activeTab === 'materials' && (
-        <div className="calc-grid">
-          {/* Input Parameters */}
-          <div className="card">
-            <form onSubmit={calculateMaterials}>
-              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.1rem' }}>
-                <Layers size={20} color="var(--primary-color)" /> Concrete & RCC Specifications
-              </h3>
-
-              <div className="form-group">
-                <label className="form-label">Structural Member Type</label>
-                <select 
-                  className="form-select"
-                  value={concreteStructureType}
-                  onChange={(e) => setConcreteStructureType(e.target.value)}
-                >
-                  <option value="slab">Roof / Floor Slab (L × W × Thickness)</option>
-                  <option value="custom">Direct Concrete Volume (Cubic Feet)</option>
+                <label className="form-label">Masonry Material Type</label>
+                <select className="form-select" value={masonryType} onChange={e => setMasonryType(e.target.value)}>
+                  <option value="clay">Standard Red Clay Bricks (9" × 4.5" × 3")</option>
+                  <option value="flyash">Fly Ash Modular Bricks (9" × 4" × 3")</option>
+                  <option value="aac">AAC Lightweight Blocks (600 × 200 × 200 mm)</option>
+                  <option value="solidblock">Solid Concrete Blocks (400 × 200 × 200 mm)</option>
                 </select>
               </div>
 
-              {concreteStructureType === 'slab' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                  <div className="form-group">
-                    <label className="form-label">Length (ft)</label>
-                    <input 
-                      type="number" 
-                      className="form-input" 
-                      value={concreteLength} 
-                      onChange={(e) => setConcreteLength(e.target.value)} 
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Width (ft)</label>
-                    <input 
-                      type="number" 
-                      className="form-input" 
-                      value={concreteWidth} 
-                      onChange={(e) => setConcreteWidth(e.target.value)} 
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Depth (inches)</label>
-                    <input 
-                      type="number" 
-                      className="form-input" 
-                      value={concreteDepth} 
-                      onChange={(e) => setConcreteDepth(e.target.value)} 
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <div className="form-group">
-                  <label className="form-label">Total Volume (Cu Ft)</label>
-                  <input 
-                    type="number" 
-                    step="any"
-                    className="form-input" 
-                    value={concreteVol} 
-                    onChange={(e) => setConcreteVol(e.target.value)} 
-                    required 
-                  />
+                  <label className="form-label">Wall Length (Ft)</label>
+                  <input type="number" className="form-input" value={wallLength} onChange={e => setWallLength(e.target.value)} required />
                 </div>
-
                 <div className="form-group">
-                  <label className="form-label">Concrete Mix Grade</label>
-                  <select 
-                    className="form-select"
-                    value={concreteGrade}
-                    onChange={(e) => setConcreteGrade(e.target.value)}
-                  >
-                    <option value="M15">M15 (1:2:4) - Standard PCC</option>
-                    <option value="M20">M20 (1:1.5:3) - Standard RCC Slabs & Beams</option>
-                    <option value="M25">M25 (1:1:2) - Heavy Structural Columns</option>
-                    <option value="M10">M10 (1:3:6) - Foundation Bedding</option>
+                  <label className="form-label">Wall Height (Ft)</label>
+                  <input type="number" className="form-input" value={wallHeight} onChange={e => setWallHeight(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Thickness (Inches)</label>
+                  <select className="form-select" value={wallThickness} onChange={e => setWallThickness(e.target.value)}>
+                    <option value="4.5">4.5" (Single Partition)</option>
+                    <option value="9">9" (Load Bearing / Outer)</option>
+                    <option value="13.5">13.5" (Heavy Retaining)</option>
                   </select>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Steel Reinforcement Ratio (% of concrete volume)</label>
-                <select 
-                  className="form-select"
-                  value={steelPercent}
-                  onChange={(e) => setSteelPercent(e.target.value)}
-                >
-                  <option value="1.0">1.0% (Light Slabs & Lintels)</option>
-                  <option value="1.5">1.5% (Standard RCC Slabs & Beams)</option>
-                  <option value="2.0">2.0% (Heavy Columns & Footings)</option>
-                  <option value="2.5">2.5% (Heavy Retaining Walls)</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="form-group">
-                  <label className="form-label">Cement Price (₹/bag)</label>
-                  <input type="number" className="form-input" value={cementPrice} onChange={(e) => setCementPrice(e.target.value)} />
+                  <label className="form-label">Door Openings Deduction (Sq Ft)</label>
+                  <input type="number" className="form-input" placeholder="e.g. 42 (2 doors 3x7)" value={doorDeductions} onChange={e => setDoorDeductions(e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">TMT Steel Price (₹/kg)</label>
-                  <input type="number" className="form-input" value={steelPrice} onChange={(e) => setSteelPrice(e.target.value)} />
+                  <label className="form-label">Window Openings Deduction (Sq Ft)</label>
+                  <input type="number" className="form-input" placeholder="e.g. 48 (3 windows 4x4)" value={windowDeductions} onChange={e => setWindowDeductions(e.target.value)} />
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '12px', marginTop: 10 }} disabled={loading}>
-                {loading ? 'Estimating...' : 'Compute Concrete & RCC Quantities'}
-              </button>
-            </form>
-          </div>
-
-          {/* Results Display */}
-          <div className="card">
-            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.1rem' }}>
-              <Layers size={20} color="var(--primary-color)" /> Material Bill of Materials (BOM)
-            </h3>
-
-            {matResult ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* Cost Highlight */}
-                <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: 18, borderRadius: 12, textAlign: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Total Material Valuation ({matResult.grade})</span>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#3b82f6', marginTop: 4 }}>
-                    ₹{matResult.totalMaterialsCost?.toLocaleString()}
-                  </div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                    Dry Mix Volume: {matResult.dryVolumeCuFt} cu ft (Compaction Factor: 1.54) | Water: {matResult.waterLiters} Liters
-                  </span>
-                </div>
-
-                {/* Itemized Table */}
-                <div style={{ border: '1px solid var(--border-color)', borderRadius: 10, overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                    <thead>
-                      <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                        <th style={{ padding: '10px 14px' }}>Material</th>
-                        <th style={{ padding: '10px 14px' }}>Quantity</th>
-                        <th style={{ padding: '10px 14px' }}>Rate</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'right' }}>Total (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {matResult.materials?.map((mat, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                          <td style={{ padding: '10px 14px', fontWeight: 600 }}>{mat.name}</td>
-                          <td style={{ padding: '10px 14px' }}>{mat.quantity.toLocaleString()} {mat.unit}</td>
-                          <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>₹{mat.unitCost}</td>
-                          <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700 }}>₹{mat.totalCost.toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.2)', padding: 12, borderRadius: 8 }}>
-                  <strong>Engineering Standard Applied:</strong> Dry concrete mix volume = Wet Volume × 1.54. Steel weight calculated using 7850 kg/m³ density formula based on structural member volume.
-                </div>
-              </div>
-            ) : (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <Layers size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-                <p>Enter concrete volume and mix ratio to calculate exact bags of cement, sand, coarse aggregate, and steel rebar.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: PLASTERING & FINISHING */}
-      {activeTab === 'plaster' && (
-        <div className="calc-grid">
-          <div className="card">
-            <form onSubmit={calculatePlaster}>
-              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.1rem' }}>
-                <Paintbrush size={20} color="var(--primary-color)" /> Plastering Area & Mix
-              </h3>
-
-              <div className="form-group">
-                <label className="form-label">Total Plaster Surface Area (Sq Ft)</label>
-                <input 
-                  type="number" 
-                  step="any"
-                  className="form-input" 
-                  value={plasterArea} 
-                  onChange={(e) => setPlasterArea(e.target.value)} 
-                  required 
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div className="form-group">
-                  <label className="form-label">Plaster Thickness (mm)</label>
-                  <select 
-                    className="form-select"
-                    value={plasterThickness}
-                    onChange={(e) => setPlasterThickness(e.target.value)}
-                  >
-                    <option value="12">12 mm (Standard Internal Walls)</option>
-                    <option value="15">15 mm (Ceiling / Rough Finish)</option>
-                    <option value="20">20 mm (External 2-Coat Weather Plaster)</option>
-                  </select>
-                </div>
-
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <div className="form-group">
                   <label className="form-label">Mortar Mix Ratio</label>
-                  <select 
-                    className="form-select"
-                    value={plasterMix}
-                    onChange={(e) => setPlasterMix(e.target.value)}
-                  >
-                    <option value="1:4">1:4 (Rich Plaster / Ceilings)</option>
-                    <option value="1:6">1:6 (Standard Wall Plaster)</option>
+                  <select className="form-select" value={mortarRatio} onChange={e => setMortarRatio(e.target.value)}>
+                    <option value="1:4">1:4 (Heavy Load)</option>
+                    <option value="1:5">1:5 (Medium Load)</option>
+                    <option value="1:6">1:6 (Standard Partition)</option>
                   </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Breakage Margin (%)</label>
+                  <input type="number" className="form-input" value={wastagePercent} onChange={e => setWastagePercent(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Unit Rate (₹/unit)</label>
+                  <input type="number" step="0.5" className="form-input" value={brickUnitPrice} onChange={e => setBrickUnitPrice(e.target.value)} />
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '12px', marginTop: 10 }} disabled={loading}>
-                {loading ? 'Calculating...' : 'Compute Plastering Quantities'}
+              <button type="submit" className="btn btn-primary" style={{ marginTop: 6 }} disabled={loading}>
+                <Sparkles size={16} /> Calculate & Save to Project
               </button>
             </form>
           </div>
 
-          <div className="card">
-            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.1rem' }}>
-              <CheckCircle2 size={20} color="var(--primary-color)" /> Plaster Material Breakdown
-            </h3>
-
-            {plasterResult ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: 18, borderRadius: 12, textAlign: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Total Plastering & Labor Cost</span>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#10b981', marginTop: 4 }}>
-                    ₹{plasterResult.totalEstimatedCost?.toLocaleString()}
+          {/* Results Card */}
+          {brickResult && (
+            <div className="card" style={{ background: 'rgba(234, 88, 12, 0.03)', borderColor: 'rgba(234, 88, 12, 0.2)' }}>
+              <h3 className="card-title" style={{ color: 'var(--primary-color)' }}>
+                <CheckCircle2 size={18} /> Brickwork & Mortar Bill of Quantities
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
+                <div style={{ padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Total Units Needed</div>
+                  <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary-color)', marginTop: 4 }}>
+                    {brickResult.bricksNeeded?.toLocaleString()} <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>units</span>
                   </div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                    Surface Area: {plasterResult.areaSqFt} sq ft | Thickness: {plasterResult.thicknessMm} mm
-                  </span>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: 2 }}>
+                    Base: {brickResult.baseBricks} + {wastagePercent}% wastage ({brickResult.wastageBricks})
+                  </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                  <div style={{ padding: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 10, textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cement Needed</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>{plasterResult.cementBags} <span style={{ fontSize: '0.8rem' }}>bags</span></div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>₹{plasterResult.cementCost?.toLocaleString()}</div>
+                <div style={{ padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Total Estimated Cost</div>
+                  <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#10b981', marginTop: 4 }}>
+                    ₹{brickResult.totalEstimatedCost?.toLocaleString()}
                   </div>
-
-                  <div style={{ padding: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 10, textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fine Sand</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>{plasterResult.sandCuFt} <span style={{ fontSize: '0.8rem' }}>cft</span></div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>₹{plasterResult.sandCost?.toLocaleString()}</div>
-                  </div>
-
-                  <div style={{ padding: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 10, textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Plastering Labor</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>₹{plasterResult.laborCost?.toLocaleString()}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>₹18 / sq ft benchmark</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: 2 }}>
+                    Bricks: ₹{brickResult.brickCost} • Mortar: ₹{brickResult.cementCost + brickResult.sandCost}
                   </div>
                 </div>
               </div>
-            ) : (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <Paintbrush size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-                <p>Enter surface square footage and mortar thickness to calculate cement, sand, and plastering labor.</p>
+
+              {/* Material Breakdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: '0.88rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                  <span>Net Wall Surface Area:</span>
+                  <strong>{brickResult.netAreaSqFt} sq ft</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                  <span>Net Wall Volume:</span>
+                  <strong>{brickResult.wallVolumeCuFt} cu ft</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                  <span>Cement Required (OPC 50kg bags):</span>
+                  <strong style={{ color: 'var(--primary-color)' }}>{brickResult.cementBags} Bags (₹{brickResult.cementCost})</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                  <span>Sand Required (Cu Ft / Tons):</span>
+                  <strong style={{ color: '#38bdf8' }}>{brickResult.sandCuFt} cft ({brickResult.sandTons} Ton)</strong>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* TAB 4: BUILDING BOQ & OVERALL BUDGETING */}
-      {activeTab === 'cost' && (
+      {/* TAB 2: CONCRETE & RCC STRUCTURE */}
+      {activeTab === 'concrete' && (
         <div className="calc-grid">
           <div className="card">
-            <form onSubmit={calculateCosts}>
-              <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.1rem' }}>
-                <IndianRupee size={20} color="var(--primary-color)" /> Building BOQ & Budget Modeler
-              </h3>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <h3 className="card-title"><Layers size={18} color="var(--primary-color)" /> Concrete RCC Structural Member</h3>
+            <form onSubmit={calculateMaterials} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="form-group">
-                  <label className="form-label">Total Built-Up Area (Sq Ft)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    value={builtUpArea} 
-                    onChange={(e) => setBuiltUpArea(e.target.value)} 
-                  />
+                  <label className="form-label">Structural Element</label>
+                  <select className="form-select" value={concreteStructureType} onChange={e => {
+                    setConcreteStructureType(e.target.value);
+                    if (e.target.value === 'slab') setSteelPercent('0.9');
+                    else if (e.target.value === 'beam') setSteelPercent('1.8');
+                    else if (e.target.value === 'column') setSteelPercent('2.5');
+                    else if (e.target.value === 'footing') setSteelPercent('0.8');
+                  }}>
+                    <option value="slab">Roof / Floor Slab (0.8 - 1.0% Steel)</option>
+                    <option value="beam">RCC Beams (1.5 - 2.0% Steel)</option>
+                    <option value="column">RCC Columns (2.0 - 3.0% Steel)</option>
+                    <option value="footing">Isolated Foundation Footing (0.8% Steel)</option>
+                  </select>
                 </div>
-
                 <div className="form-group">
-                  <label className="form-label">Construction Quality Specification</label>
-                  <select 
-                    className="form-select"
-                    value={qualityTier}
-                    onChange={(e) => setQualityTier(e.target.value)}
-                  >
-                    <option value="standard">Standard Quality (₹1,450 / sq ft)</option>
-                    <option value="premium">Premium Quality (₹1,950 / sq ft)</option>
-                    <option value="luxury">Luxury Architect Grade (₹2,600 / sq ft)</option>
+                  <label className="form-label">Concrete Mix Grade (IS 456)</label>
+                  <select className="form-select" value={concreteGrade} onChange={e => setConcreteGrade(e.target.value)}>
+                    <option value="M7.5">M7.5 (1:4:8 - PCC Sub-base)</option>
+                    <option value="M10">M10 (1:3:6 - Plain Foundation)</option>
+                    <option value="M15">M15 (1:2:4 - Light Structural)</option>
+                    <option value="M20">M20 (1:1.5:3 - Standard Slabs & Beams)</option>
+                    <option value="M25">M25 (1:1:2 - Heavy Columns & Footings)</option>
+                    <option value="M30">M30 (1:0.75:1.5 - High Strength RCC)</option>
                   </select>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div className="form-group">
-                  <label className="form-label">Material Expenses (₹)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    value={materialCost} 
-                    onChange={(e) => setMaterialCost(e.target.value)} 
-                    required 
-                  />
+              {/* Dimensions Helper */}
+              <div style={{ padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                  Member Dimensions (to auto-calculate volume):
                 </div>
-
-                <div className="form-group">
-                  <label className="form-label">Labor & Contractor Fees (₹)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    value={laborCost} 
-                    onChange={(e) => setLaborCost(e.target.value)} 
-                    required 
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label className="form-label">Length (Ft)</label>
+                    <input type="number" className="form-input" value={concreteLength} onChange={e => setConcreteLength(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="form-label">Width (Ft)</label>
+                    <input type="number" className="form-input" value={concreteWidth} onChange={e => setConcreteWidth(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="form-label">Depth/Thick (Inches)</label>
+                    <input type="number" className="form-input" value={concreteDepth} onChange={e => setConcreteDepth(e.target.value)} />
+                  </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="form-group">
-                  <label className="form-label">Logistics & Equipment (₹)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    value={transportCost} 
-                    onChange={(e) => setTransportCost(e.target.value)} 
-                  />
+                  <label className="form-label">Total Concrete Volume (Cu Ft)</label>
+                  <input type="number" className="form-input" value={concreteVol} onChange={e => setConcreteVol(e.target.value)} required />
                 </div>
-
                 <div className="form-group">
-                  <label className="form-label">Contingency / Misc Buffer (₹)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    value={miscCost} 
-                    onChange={(e) => setMiscCost(e.target.value)} 
-                  />
+                  <label className="form-label">Reinforcement Steel (% of Vol)</label>
+                  <input type="number" step="0.1" className="form-input" value={steelPercent} onChange={e => setSteelPercent(e.target.value)} />
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '12px', marginTop: 10 }} disabled={loading}>
-                {loading ? 'Generating BOQ...' : 'Generate Comprehensive BOQ & Budget'}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.72rem' }}>Cement (₹/bag)</label>
+                  <input type="number" className="form-input" value={cementPrice} onChange={e => setCementPrice(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.72rem' }}>Sand (₹/cft)</label>
+                  <input type="number" className="form-input" value={sandPrice} onChange={e => setSandPrice(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.72rem' }}>Agg (₹/cft)</label>
+                  <input type="number" className="form-input" value={aggregatePrice} onChange={e => setAggregatePrice(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.72rem' }}>Steel (₹/kg)</label>
+                  <input type="number" className="form-input" value={steelPrice} onChange={e => setSteelPrice(e.target.value)} />
+                </div>
+              </div>
+
+              <button type="submit" className="btn btn-primary" style={{ marginTop: 6 }} disabled={loading}>
+                <Sparkles size={16} /> Calculate Concrete & Steel BOM
               </button>
             </form>
           </div>
 
-          <div className="card">
-            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.1rem' }}>
-              <TrendingUp size={20} color="var(--primary-color)" /> Project Cost & Stage Breakdown
-            </h3>
+          {/* Results Card */}
+          {matResult && (
+            <div className="card" style={{ background: 'rgba(56, 189, 248, 0.03)', borderColor: 'rgba(56, 189, 248, 0.2)' }}>
+              <h3 className="card-title" style={{ color: 'var(--accent-color)' }}>
+                <Layers size={18} /> Concrete Bill of Materials (BOM)
+              </h3>
 
-            {costResult ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.3)', padding: 18, borderRadius: 12, textAlign: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Total Project Estimate</span>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#c084fc', marginTop: 4 }}>
-                    ₹{costResult.totalEstimatedCost?.toLocaleString()}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+                <div style={{ padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Wet vs Dry Volume</div>
+                  <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: 4 }}>
+                    {matResult.concreteVolumeCuFt} <span style={{ fontSize: '0.85rem' }}>cft ({matResult.concreteVolumeM3} m³)</span>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: 2 }}>
+                    Dry Mix Compaction Volume: {matResult.dryVolumeCuFt} cu ft (1.54×)
                   </div>
                 </div>
 
-                {/* Stage by stage BOQ */}
-                {costResult.boqBreakdown && (
-                  <div style={{ border: '1px solid var(--border-color)', borderRadius: 10, overflow: 'hidden' }}>
-                    <div style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.03)', fontWeight: 600, fontSize: '0.85rem' }}>
-                      Standard Phase-Wise Cost Allocation
-                    </div>
-                    {costResult.boqBreakdown.stages?.map((stg, idx) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px', borderBottom: '1px solid var(--border-color)', fontSize: '0.82rem' }}>
-                        <span>{stg.stage} ({stg.percentage}%)</span>
-                        <span style={{ fontWeight: 700 }}>₹{Math.round(stg.cost).toLocaleString()}</span>
-                      </div>
-                    ))}
+                <div style={{ padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Total Material Value</div>
+                  <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#10b981', marginTop: 4 }}>
+                    ₹{matResult.totalMaterialsCost?.toLocaleString()}
                   </div>
-                )}
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: 2 }}>
+                    Water needed: ~{matResult.waterLiters} Liters
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <IndianRupee size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-                <p>Input project square footage or customized costs to generate a full construction BOQ and financial schedule.</p>
+
+              {/* Itemized Materials Table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', fontSize: '0.85rem', textAlign: 'left', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                      <th style={{ padding: '8px 6px' }}>Material</th>
+                      <th style={{ padding: '8px 6px' }}>Quantity</th>
+                      <th style={{ padding: '8px 6px' }}>Unit Rate</th>
+                      <th style={{ padding: '8px 6px', textAlign: 'right' }}>Total (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matResult.materials.map((m, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                        <td style={{ padding: '10px 6px', fontWeight: 600 }}>{m.name}</td>
+                        <td style={{ padding: '10px 6px' }}>{m.quantity.toLocaleString()} {m.unit}</td>
+                        <td style={{ padding: '10px 6px' }}>₹{m.unitCost}</td>
+                        <td style={{ padding: '10px 6px', textAlign: 'right', fontWeight: 700, color: '#10b981' }}>₹{m.totalCost?.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: PLASTERING & TILING */}
+      {activeTab === 'finishing' && (
+        <div className="calc-grid">
+          {/* Plastering */}
+          <div className="card">
+            <h3 className="card-title"><Paintbrush size={18} color="var(--primary-color)" /> Plastering Estimator</h3>
+            <form onSubmit={calculatePlaster} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="form-group">
+                <label className="form-label">Plaster Surface Area (Sq Ft)</label>
+                <input type="number" className="form-input" value={plasterArea} onChange={e => setPlasterArea(e.target.value)} required />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Thickness</label>
+                  <select className="form-select" value={plasterThickness} onChange={e => setPlasterThickness(e.target.value)}>
+                    <option value="6">6mm (Ceiling)</option>
+                    <option value="12">12mm (Internal Wall)</option>
+                    <option value="15">15mm (Rough Internal)</option>
+                    <option value="20">20mm (External Weather)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Mix Ratio</label>
+                  <select className="form-select" value={plasterMix} onChange={e => setPlasterMix(e.target.value)}>
+                    <option value="1:3">1:3 (Waterproofing/Ceiling)</option>
+                    <option value="1:4">1:4 (Standard Internal)</option>
+                    <option value="1:6">1:6 (External Rendering)</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" className="btn btn-primary">
+                <Sparkles size={16} /> Compute Plaster Materials
+              </button>
+
+              {plasterResult && (
+                <div style={{ marginTop: 16, padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Cement Required:</span>
+                    <strong style={{ color: 'var(--primary-color)' }}>{plasterResult.cementBags} Bags (₹{plasterResult.cementCost})</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Sand Required:</span>
+                    <strong>{plasterResult.sandCuFt} cu ft (₹{plasterResult.sandCost})</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Labor Cost (₹18/sqft):</span>
+                    <strong>₹{plasterResult.laborCost?.toLocaleString()}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: 6 }}>
+                    <span style={{ fontWeight: 700 }}>Total Plaster Cost:</span>
+                    <strong style={{ color: '#10b981', fontSize: '1rem' }}>₹{plasterResult.totalEstimatedCost?.toLocaleString()}</strong>
+                  </div>
+                </div>
+              )}
+            </form>
+          </div>
+
+          {/* Flooring & Tiling */}
+          <div className="card">
+            <h3 className="card-title"><Grid size={18} color="var(--accent-color)" /> Flooring & Tiling Estimator</h3>
+            <form onSubmit={calculateTiling} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="form-group">
+                <label className="form-label">Floor Area (Sq Ft)</label>
+                <input type="number" className="form-input" value={tileFloorArea} onChange={e => setTileFloorArea(e.target.value)} required />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Tile Dimensions</label>
+                  <select className="form-select" value={tileSize} onChange={e => setTileSize(e.target.value)}>
+                    <option value="2x2">2 × 2 Ft (Vitrified Living/Bed)</option>
+                    <option value="2x4">2 × 4 Ft (Large GVT Slab)</option>
+                    <option value="1x1">1 × 1 Ft (Anti-skid Bathroom)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Box Price (₹/box)</label>
+                  <input type="number" className="form-input" value={tileBoxPrice} onChange={e => setTileBoxPrice(e.target.value)} />
+                </div>
+              </div>
+              <button type="submit" className="btn btn-primary">
+                <Sparkles size={16} /> Compute Tile Boxes & Adhesive
+              </button>
+
+              {tileResult && (
+                <div style={{ marginTop: 16, padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Tile Boxes Required:</span>
+                    <strong style={{ color: 'var(--accent-color)' }}>{tileResult.boxes} Boxes ({tileResult.totalTiles} tiles)</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Tile Adhesive Bags (20kg):</span>
+                    <strong>{tileResult.adhesiveBags} Bags (₹{tileResult.adhesiveCost})</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Epoxy Grout:</span>
+                    <strong>{tileResult.groutKg} kg (₹{tileResult.groutCost})</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: 6 }}>
+                    <span style={{ fontWeight: 700 }}>Total Flooring Cost:</span>
+                    <strong style={{ color: '#10b981', fontSize: '1rem' }}>₹{tileResult.totalEstimatedCost?.toLocaleString()}</strong>
+                  </div>
+                </div>
+              )}
+            </form>
           </div>
         </div>
       )}
 
-      {/* TAB 5: SAVED PROJECT ESTIMATES HISTORY */}
-      {activeTab === 'history' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* TAB 4: STEEL BAR BENDING SCHEDULE (BBS) */}
+      {activeTab === 'steel' && (
+        <div className="calc-grid">
           <div className="card">
-            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '1.2rem' }}>
-              <FolderClock size={22} color="var(--primary-color)" /> Project Estimation History Vault
+            <h3 className="card-title"><Ruler size={18} color="var(--primary-color)" /> Steel Rebar & Weight Parameters</h3>
+            <form onSubmit={calculateSteelBBS} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Bar Diameter (mm)</label>
+                  <select className="form-select" value={steelBarDia} onChange={e => setSteelBarDia(e.target.value)}>
+                    <option value="8">8 mm (Stirrups / Ties - 0.395 kg/m)</option>
+                    <option value="10">10 mm (Slab Distribution - 0.617 kg/m)</option>
+                    <option value="12">12 mm (Main Slab / Light Beam - 0.888 kg/m)</option>
+                    <option value="16">16 mm (Beam Main Rebar - 1.578 kg/m)</option>
+                    <option value="20">20 mm (Heavy Column Main - 2.466 kg/m)</option>
+                    <option value="25">25 mm (Footing / Transfer Beam - 3.853 kg/m)</option>
+                    <option value="32">32 mm (Heavy Civil Retaining - 6.313 kg/m)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Cut Length per Bar (Meters)</label>
+                  <input type="number" step="0.1" className="form-input" value={steelLengthMeters} onChange={e => setSteelLengthMeters(e.target.value)} required />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Number of Bars</label>
+                  <input type="number" className="form-input" value={steelNumBars} onChange={e => setSteelNumBars(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Steel Rate (₹/kg)</label>
+                  <input type="number" className="form-input" value={steelRatePerKg} onChange={e => setSteelRatePerKg(e.target.value)} />
+                </div>
+              </div>
+
+              <button type="submit" className="btn btn-primary">
+                <Sparkles size={16} /> Calculate Rebar Weight & BBS
+              </button>
+            </form>
+          </div>
+
+          {steelBBSResult && (
+            <div className="card" style={{ background: 'rgba(234, 88, 12, 0.03)', borderColor: 'rgba(234, 88, 12, 0.2)' }}>
+              <h3 className="card-title" style={{ color: 'var(--primary-color)' }}>
+                <CheckCircle2 size={18} /> Bar Bending Weight & Valuation
+              </h3>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+                <div style={{ padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Total Steel Weight</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--primary-color)', marginTop: 4 }}>
+                    {steelBBSResult.totalWeightKg?.toLocaleString()} <span style={{ fontSize: '0.85rem' }}>kg</span>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: 2 }}>
+                    Equivalent: {steelBBSResult.totalWeightTons} Metric Tons
+                  </div>
+                </div>
+
+                <div style={{ padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Total Rebar Value</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#10b981', marginTop: 4 }}>
+                    ₹{steelBBSResult.totalCost?.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: 2 }}>
+                    Binding wire needed: {steelBBSResult.bindingWireKg} kg
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: '0.88rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                  <span>Theoretical Unit Weight (d²/162):</span>
+                  <strong>{steelBBSResult.unitWeightKgPerM} kg / meter</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                  <span>Total Running Rebar Length:</span>
+                  <strong>{(steelBBSResult.totalLengthMeters * steelBBSResult.numberOfBars).toFixed(1)} meters</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                  <span>Binding Wire Cost (18-gauge GI):</span>
+                  <strong>{steelBBSResult.bindingWireKg} kg (₹{steelBBSResult.bindingWireCost})</strong>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 5: BUILDING BOQ & BUDGET */}
+      {activeTab === 'boq' && (
+        <div className="calc-grid">
+          <div className="card">
+            <h3 className="card-title"><Building size={18} color="var(--primary-color)" /> Project BOQ & Specifications</h3>
+            <form onSubmit={calculateCost} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Built-up Area per Floor (Sq Ft)</label>
+                  <input type="number" className="form-input" value={builtUpArea} onChange={e => setBuiltUpArea(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Number of Floors</label>
+                  <select className="form-select" value={floorsCount} onChange={e => setFloorsCount(e.target.value)}>
+                    <option value="1">Ground Floor Only (G)</option>
+                    <option value="2">G + 1 Floor (Duplex / Villa)</option>
+                    <option value="3">G + 2 Floors (Apartments)</option>
+                    <option value="4">G + 3 Floors (Commercial)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Construction Quality Specification Tier</label>
+                <select className="form-select" value={qualityTier} onChange={e => setQualityTier(e.target.value)}>
+                  <option value="economy">Economy Tier (₹1,600 / sqft - Basic materials & standard fixtures)</option>
+                  <option value="standard">Standard Tier (₹2,100 / sqft - Teak wood frame, premium vitrified, branded CP)</option>
+                  <option value="premium">Premium Tier (₹2,850 / sqft - Italian marble, UPVC German windows, home automation)</option>
+                  <option value="luxury">Luxury Tier (₹3,800 / sqft - Designer architectural custom build & luxury facade)</option>
+                </select>
+              </div>
+
+              <button type="submit" className="btn btn-primary" style={{ marginTop: 6 }}>
+                <Sparkles size={16} /> Generate 10-Phase Project BOQ
+              </button>
+            </form>
+          </div>
+
+          {/* BOQ Results Card */}
+          {costResult && (
+            <div className="card" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <h3 className="card-title" style={{ color: '#10b981' }}>
+                <IndianRupee size={18} /> Phase-wise Bill of Quantities (BOQ)
+              </h3>
+
+              <div style={{ padding: 14, background: 'rgba(16, 185, 129, 0.08)', borderRadius: 12, border: '1px solid rgba(16, 185, 129, 0.2)', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Total Built-up Area: {costResult.totalBuiltUpArea?.toLocaleString()} sq ft</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#10b981', marginTop: 2 }}>
+                    ₹{(costResult.totalEstimatedBudget / 100000).toFixed(2)} Lakhs
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', fontSize: '0.85rem' }}>
+                  <div style={{ color: 'var(--text-muted)' }}>Rate per Sq Ft</div>
+                  <strong style={{ color: 'var(--primary-color)' }}>₹{costResult.ratePerSqFt} / sqft</strong>
+                </div>
+              </div>
+
+              {/* 10 Phases List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 380, overflowY: 'auto', paddingRight: 4 }}>
+                {costResult.phases.map((p, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.85rem' }}>
+                    <div>
+                      <span style={{ fontWeight: 600 }}>{p.phase}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginLeft: 8 }}>({p.percent}%)</span>
+                    </div>
+                    <strong style={{ color: 'var(--text-primary)' }}>₹{Math.round(p.cost).toLocaleString()}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 6: SAVED ESTIMATES VAULT */}
+      {activeTab === 'vault' && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 className="card-title" style={{ margin: 0 }}>
+              <FolderClock size={18} color="var(--primary-color)" /> Project Saved Estimations Vault
             </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              All estimates saved to the persistent database for project <strong>{projects.find(p => p.id === projectId)?.name || projectId}</strong>
-            </p>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Project: <strong>{projects.find(p => p.id === projectId)?.name || 'Selected Project'}</strong>
+            </span>
+          </div>
 
-            {/* Brick Estimations History */}
-            <div style={{ marginTop: 20 }}>
-              <h4 style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <BrickWall size={16} /> Saved Brickwork Estimates ({savedEstimates.bricks.length})
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+            {/* Bricks Vault */}
+            <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 12 }}>
+              <h4 style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--primary-color)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <BrickWall size={16} /> Saved Brickwork Estimates ({savedEstimates.bricks?.length || 0})
               </h4>
-              {savedEstimates.bricks.length === 0 ? (
-                <div style={{ padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.85rem', color: 'var(--text-dim)' }}>
-                  No brick estimations saved for this project yet.
-                </div>
+              {savedEstimates.bricks?.length === 0 ? (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', padding: 14, textAlign: 'center' }}>No saved brick calculations yet.</div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                  {savedEstimates.bricks.map(item => (
-                    <div key={item.id} style={{ padding: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {savedEstimates.bricks.map((b) => (
+                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.82rem' }}>
                       <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary-color)' }}>
-                          {item.bricksNeeded?.toLocaleString()} Bricks
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                          Wall: {item.length}' × {item.height}' ({item.thickness}" thick)
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                          Cement: {item.cementBags || 0} bags | Cost: ₹{item.totalCost?.toLocaleString() || 0}
-                        </div>
+                        <div><strong>{b.bricksNeeded?.toLocaleString()} bricks</strong> ({b.wallVolumeCuFt || 0} cft)</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>₹{b.totalEstimatedCost?.toLocaleString() || b.totalCost?.toLocaleString()}</div>
                       </div>
-                      <button 
-                        onClick={() => handleDeleteSaved('brick', item.id)} 
-                        className="btn-secondary" 
-                        style={{ padding: 6, color: 'var(--color-error)' }}
-                        title="Delete estimate"
-                      >
-                        <Trash2 size={16} />
+                      <button onClick={() => handleDeleteEstimate('brick', b.id)} className="btn-secondary" style={{ padding: 6, borderRadius: 6, color: 'var(--color-error)' }}>
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   ))}
@@ -1031,34 +1115,23 @@ const Calculators = () => {
               )}
             </div>
 
-            {/* Materials History */}
-            <div style={{ marginTop: 24 }}>
-              <h4 style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Layers size={16} /> Saved Inventory Materials ({savedEstimates.materials.length})
+            {/* Materials Vault */}
+            <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 12 }}>
+              <h4 style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--accent-color)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Layers size={16} /> Saved Concrete & Steel Items ({savedEstimates.materials?.length || 0})
               </h4>
-              {savedEstimates.materials.length === 0 ? (
-                <div style={{ padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.85rem', color: 'var(--text-dim)' }}>
-                  No material inventory saved for this project yet.
-                </div>
+              {savedEstimates.materials?.length === 0 ? (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', padding: 14, textAlign: 'center' }}>No saved concrete records yet.</div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                  {savedEstimates.materials.map(item => (
-                    <div key={item.id} style={{ padding: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {savedEstimates.materials.map((m) => (
+                    <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.82rem' }}>
                       <div>
-                        <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {item.name}
-                        </div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--primary-color)', fontWeight: 700, marginTop: 2 }}>
-                          {item.quantity?.toLocaleString()} {item.unit} (₹{item.totalCost?.toLocaleString()})
-                        </div>
+                        <div><strong>{m.name}</strong></div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{m.quantity} {m.unit} • ₹{m.totalCost?.toLocaleString()}</div>
                       </div>
-                      <button 
-                        onClick={() => handleDeleteSaved('material', item.id)} 
-                        className="btn-secondary" 
-                        style={{ padding: 6, color: 'var(--color-error)' }}
-                        title="Delete item"
-                      >
-                        <Trash2 size={16} />
+                      <button onClick={() => handleDeleteEstimate('material', m.id)} className="btn-secondary" style={{ padding: 6, borderRadius: 6, color: 'var(--color-error)' }}>
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   ))}
@@ -1066,34 +1139,23 @@ const Calculators = () => {
               )}
             </div>
 
-            {/* Cost Budget History */}
-            <div style={{ marginTop: 24 }}>
-              <h4 style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <IndianRupee size={16} /> Saved Budget Estimates ({savedEstimates.costs.length})
+            {/* Costs Vault */}
+            <div style={{ padding: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 12 }}>
+              <h4 style={{ fontSize: '0.92rem', fontWeight: 600, color: '#10b981', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <IndianRupee size={16} /> Saved BOQ Budgets ({savedEstimates.costs?.length || 0})
               </h4>
-              {savedEstimates.costs.length === 0 ? (
-                <div style={{ padding: 14, background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.85rem', color: 'var(--text-dim)' }}>
-                  No budget estimations saved for this project yet.
-                </div>
+              {savedEstimates.costs?.length === 0 ? (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', padding: 14, textAlign: 'center' }}>No saved BOQ records yet.</div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                  {savedEstimates.costs.map(item => (
-                    <div key={item.id} style={{ padding: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {savedEstimates.costs.map((c) => (
+                    <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: 'rgba(255,255,255,0.02)', borderRadius: 8, fontSize: '0.82rem' }}>
                       <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#c084fc' }}>
-                          ₹{item.totalEstimatedCost?.toLocaleString()}
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                          Mat: ₹{item.materialCost?.toLocaleString()} | Labor: ₹{item.laborCost?.toLocaleString()}
-                        </div>
+                        <div><strong>₹{(Number(c.totalEstimatedCost || 0) / 100000).toFixed(2)} Lakhs</strong></div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{c.totalBuiltUpArea || 1800} sq ft • {c.qualityTier || 'Standard'}</div>
                       </div>
-                      <button 
-                        onClick={() => handleDeleteSaved('cost', item.id)} 
-                        className="btn-secondary" 
-                        style={{ padding: 6, color: 'var(--color-error)' }}
-                        title="Delete estimate"
-                      >
-                        <Trash2 size={16} />
+                      <button onClick={() => handleDeleteEstimate('cost', c.id)} className="btn-secondary" style={{ padding: 6, borderRadius: 6, color: 'var(--color-error)' }}>
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   ))}

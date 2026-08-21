@@ -2,16 +2,17 @@ const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
 
-// 1. Smart Brick & Mortar Calculator
+// 1. Smart Brick & Block Masonry Calculator
 router.post('/bricks', async (req, res) => {
     const { 
         length, 
         height, 
         thickness, 
-        brickLength = 9, 
-        brickWidth = 4.5, 
-        brickHeight = 3, 
+        masonryType = 'clay', // 'clay', 'flyash', 'aac', 'solidblock'
+        doorDeductionArea = 0,
+        windowDeductionArea = 0,
         mortarThickness = 0.5, 
+        mortarRatio = '1:6', // '1:4', '1:5', '1:6'
         wastage = 10,
         brickUnitPrice = 8.50,
         cementBagPrice = 380,
@@ -30,20 +31,28 @@ router.post('/bricks', async (req, res) => {
         const t = parseFloat(thickness);
         const waste = parseFloat(wastage || 0);
 
+        // Deductions
+        const grossArea = l * h;
+        const deductions = parseFloat(doorDeductionArea || 0) + parseFloat(windowDeductionArea || 0);
+        const netArea = Math.max(1, grossArea - deductions);
+
         // Wall Volume in cubic feet
         const thicknessFt = t / 12;
-        const wallVolume = l * h * thicknessFt;
+        const wallVolume = netArea * thicknessFt;
 
-        // Modular Brick Volume without mortar (in cubic inches -> cubic feet)
-        const singleBrickVolInches = parseFloat(brickLength) * parseFloat(brickWidth) * parseFloat(brickHeight);
+        // Brick sizes (inches)
+        let bL = 9, bW = 4.5, bH = 3;
+        if (masonryType === 'flyash') { bL = 9; bW = 4; bH = 3; }
+        else if (masonryType === 'aac') { bL = 23.6; bW = 8; bH = 8; } // 600x200x200mm
+        else if (masonryType === 'solidblock') { bL = 16; bW = 8; bH = 8; } // 400x200x200mm
+
+        // Modular Brick Volume without mortar
+        const singleBrickVolInches = bL * bW * bH;
         const singleBrickVolFt = singleBrickVolInches / 1728;
 
         // Brick Volume with mortar joint
-        const brickLengthWithMortar = parseFloat(brickLength) + parseFloat(mortarThickness);
-        const brickWidthWithMortar = parseFloat(brickWidth) + parseFloat(mortarThickness);
-        const brickHeightWithMortar = parseFloat(brickHeight) + parseFloat(mortarThickness);
-        
-        const singleBrickVolWithMortarInches = brickLengthWithMortar * brickWidthWithMortar * brickHeightWithMortar;
+        const mJoint = parseFloat(mortarThickness || 0.5);
+        const singleBrickVolWithMortarInches = (bL + mJoint) * (bW + mJoint) * (bH + mJoint);
         const singleBrickVolWithMortarFt = singleBrickVolWithMortarInches / 1728;
 
         // Calculate brick counts
@@ -52,32 +61,41 @@ router.post('/bricks', async (req, res) => {
         const totalBricksNeeded = baseBricksNeeded + wastageBricks;
 
         // Mortar volume calculation:
-        // Wet mortar volume = Total Wall Volume - (baseBricksNeeded * single brick clean volume)
         const totalBricksCleanVolumeFt = baseBricksNeeded * singleBrickVolFt;
         const wetMortarVolumeFt = Math.max(0, wallVolume - totalBricksCleanVolumeFt);
         
-        // Dry mortar compaction factor (1.33 for masonry mortar, standard 1:6 mix ratio = 7 parts)
+        // Dry mortar compaction factor (1.33 for masonry mortar)
         const dryMortarVolumeFt = wetMortarVolumeFt * 1.33;
-        const mortarMixParts = 7; // 1:6 cement:sand
-        const cementCuFt = dryMortarVolumeFt * (1 / mortarMixParts);
-        const sandCuFt = dryMortarVolumeFt * (6 / mortarMixParts);
+        
+        const ratioParts = mortarRatio === '1:4' ? 5 : (mortarRatio === '1:5' ? 6 : 7);
+        const sandPart = ratioParts - 1;
+
+        const cementCuFt = dryMortarVolumeFt * (1 / ratioParts);
+        const sandCuFt = dryMortarVolumeFt * (sandPart / ratioParts);
         const cementBags = Math.ceil(cementCuFt / 1.25); // 1.25 cu ft per bag
+        const sandTons = parseFloat(((sandCuFt * 45) / 1000).toFixed(2)); // ~45kg/cft
 
         // Estimated Cost Breakdown
-        const brickCost = totalBricksNeeded * parseFloat(brickUnitPrice);
-        const cementCost = cementBags * parseFloat(cementBagPrice);
-        const sandCost = Math.ceil(sandCuFt) * parseFloat(sandCftPrice);
+        const unitP = parseFloat(brickUnitPrice || 8.5);
+        const cPrice = parseFloat(cementBagPrice || 380);
+        const sPrice = parseFloat(sandCftPrice || 45);
+
+        const brickCost = totalBricksNeeded * unitP;
+        const cementCost = cementBags * cPrice;
+        const sandCost = Math.ceil(sandCuFt) * sPrice;
         const totalEstimatedCost = brickCost + cementCost + sandCost;
 
         const calculationSteps = [
-            `Wall area: ${(l * h).toFixed(2)} sq ft | Wall volume: ${wallVolume.toFixed(2)} cu ft (L: ${l} ft, H: ${h} ft, T: ${t} in)`,
-            `Standard single brick with ${mortarThickness}" joint: ${singleBrickVolWithMortarFt.toFixed(5)} cu ft`,
-            `Base bricks required: ${baseBricksNeeded} units`,
-            `Wastage allowance (+${waste}%): ${wastageBricks} units -> Total: ${totalBricksNeeded} bricks`,
-            `Mortar mix requirement (1:6): ${cementBags} bags of Cement + ${Math.ceil(sandCuFt)} cu ft of Sand`
+            `Gross wall area: ${grossArea.toFixed(1)} sq ft - Deductions: ${deductions.toFixed(1)} sq ft -> Net: ${netArea.toFixed(1)} sq ft`,
+            `Net wall volume: ${wallVolume.toFixed(2)} cu ft (L: ${l} ft, H: ${h} ft, T: ${t} in)`,
+            `Selected unit size (${masonryType.toUpperCase()}): ${bL}" × ${bW}" × ${bH}" with ${mJoint}" mortar joint`,
+            `Base masonry count: ${baseBricksNeeded} units + Wastage (+${waste}%): ${wastageBricks} -> Total: ${totalBricksNeeded} units`,
+            `Mortar required (${mortarRatio} mix): ${cementBags} Cement bags (50kg) + ${Math.ceil(sandCuFt)} cu ft Sand (${sandTons} Ton)`
         ];
 
         const responseData = {
+            masonryType,
+            netAreaSqFt: parseFloat(netArea.toFixed(2)),
             wallVolumeCuFt: parseFloat(wallVolume.toFixed(2)),
             bricksNeeded: totalBricksNeeded,
             baseBricks: baseBricksNeeded,
@@ -86,6 +104,7 @@ router.post('/bricks', async (req, res) => {
             dryMortarVolumeCuFt: parseFloat(dryMortarVolumeFt.toFixed(2)),
             cementBags,
             sandCuFt: Math.ceil(sandCuFt),
+            sandTons,
             brickCost: parseFloat(brickCost.toFixed(2)),
             cementCost: parseFloat(cementCost.toFixed(2)),
             sandCost: parseFloat(sandCost.toFixed(2)),
@@ -93,7 +112,6 @@ router.post('/bricks', async (req, res) => {
             calculationSteps
         };
 
-        // If project ID is provided, save estimation to DB
         if (projectId) {
             await db.brickEstimations.create({
                 projectId,
@@ -119,8 +137,12 @@ router.post('/bricks', async (req, res) => {
 router.post('/materials', async (req, res) => {
     const { 
         concreteVolume, 
+        structureType = 'slab', // 'slab', 'beam', 'column', 'footing'
+        length,
+        width,
+        depth,
         grade = 'M20', 
-        steelPercent = 1.5,
+        steelPercent,
         cementBagPrice = 380,
         sandCftPrice = 45,
         aggregateCftPrice = 55,
@@ -128,22 +150,29 @@ router.post('/materials', async (req, res) => {
         projectId 
     } = req.body;
 
-    if (!concreteVolume) {
-        return res.status(400).json({ error: 'Concrete Volume (in cubic feet) is required' });
+    let volume = parseFloat(concreteVolume);
+
+    // Calculate volume from dimensions if provided
+    if (!volume && length && width && depth) {
+        volume = parseFloat(length) * parseFloat(width) * (parseFloat(depth) / 12);
+    }
+
+    if (!volume) {
+        return res.status(400).json({ error: 'Concrete volume or Length, Width, Depth are required' });
     }
 
     try {
-        const volume = parseFloat(concreteVolume);
-        
         // 1.54 is the standard compaction factor for dry concrete volume
         const dryVolume = volume * 1.54;
         
         // Mix Ratios (Cement : Sand : Aggregate)
         const mixRatios = {
+            'M7.5': { c: 1, s: 4, a: 8, total: 13 },
             'M10': { c: 1, s: 3, a: 6, total: 10 },
             'M15': { c: 1, s: 2, a: 4, total: 7 },
             'M20': { c: 1, s: 1.5, a: 3, total: 5.5 },
-            'M25': { c: 1, s: 1, a: 2, total: 4 }
+            'M25': { c: 1, s: 1, a: 2, total: 4 },
+            'M30': { c: 1, s: 0.75, a: 1.5, total: 3.25 }
         };
 
         const selectedMix = mixRatios[grade] || mixRatios['M20'];
@@ -154,12 +183,20 @@ router.post('/materials', async (req, res) => {
         // Cement bags (1.25 cu ft per 50kg bag)
         const cementBags = Math.ceil(cementCuFt / 1.25);
         
-        // Reinforcement Steel calculation: Density of steel = 7850 kg/m3 (~490 lbs/cu ft)
-        // Standard structural percentage is ~1.2% - 2.0% of concrete volume
-        const steelRatio = parseFloat(steelPercent || 1.5) / 100;
-        const steelWeightKg = Math.ceil(volume * 0.0283168 * 7850 * steelRatio); // 1 cu ft = 0.0283168 m3
+        // Default steel percentages by member type:
+        let defaultSteelPct = 1.2;
+        if (structureType === 'slab') defaultSteelPct = 0.9;
+        else if (structureType === 'beam') defaultSteelPct = 1.8;
+        else if (structureType === 'column') defaultSteelPct = 2.5;
+        else if (structureType === 'footing') defaultSteelPct = 0.8;
 
-        // Water requirement: Water-Cement ratio ~0.45-0.5 (25 to 28 liters per bag of cement)
+        const effectiveSteelPct = steelPercent !== undefined && steelPercent !== '' ? parseFloat(steelPercent) : defaultSteelPct;
+        const steelRatio = effectiveSteelPct / 100;
+        
+        // Density of steel = 7850 kg/m3 (1 cu ft = 0.0283168 m3)
+        const steelWeightKg = Math.ceil(volume * 0.0283168 * 7850 * steelRatio);
+
+        // Water requirement: ~28 liters per bag of cement
         const waterLiters = cementBags * 28;
 
         const cBagPrice = parseFloat(cementBagPrice || 380);
@@ -167,30 +204,31 @@ router.post('/materials', async (req, res) => {
         const aPrice = parseFloat(aggregateCftPrice || 55);
         const stPrice = parseFloat(steelKgPrice || 65);
 
-        // Materials items array
         const materials = [
-            { name: 'Cement (OPC/PPC 50kg)', quantity: cementBags, unit: 'bags', unitCost: cBagPrice, totalCost: parseFloat((cementBags * cBagPrice).toFixed(2)) },
+            { name: `Cement (Grade ${grade} OPC/PPC 50kg)`, quantity: cementBags, unit: 'bags', unitCost: cBagPrice, totalCost: parseFloat((cementBags * cBagPrice).toFixed(2)) },
             { name: 'River Sand / M-Sand', quantity: Math.ceil(sandCuFt), unit: 'cu ft', unitCost: sPrice, totalCost: parseFloat((Math.ceil(sandCuFt) * sPrice).toFixed(2)) },
-            { name: 'Coarse Aggregate (20mm)', quantity: Math.ceil(aggregateCuFt), unit: 'cu ft', unitCost: aPrice, totalCost: parseFloat((Math.ceil(aggregateCuFt) * aPrice).toFixed(2)) },
-            { name: 'TMT Steel Rebar (Fe500D)', quantity: steelWeightKg, unit: 'kg', unitCost: stPrice, totalCost: parseFloat((steelWeightKg * stPrice).toFixed(2)) }
+            { name: 'Coarse Aggregate (20mm Crushed Metal)', quantity: Math.ceil(aggregateCuFt), unit: 'cu ft', unitCost: aPrice, totalCost: parseFloat((Math.ceil(aggregateCuFt) * aPrice).toFixed(2)) },
+            { name: `TMT Steel Rebar Fe500D (${effectiveSteelPct}%)`, quantity: steelWeightKg, unit: 'kg', unitCost: stPrice, totalCost: parseFloat((steelWeightKg * stPrice).toFixed(2)) }
         ];
 
         const totalMaterialsCost = materials.reduce((acc, curr) => acc + curr.totalCost, 0);
 
         const responseData = {
+            structureType,
             grade,
-            concreteVolumeCuFt: volume,
+            concreteVolumeCuFt: parseFloat(volume.toFixed(2)),
+            concreteVolumeM3: parseFloat((volume * 0.0283168).toFixed(2)),
             dryVolumeCuFt: parseFloat(dryVolume.toFixed(2)),
             cementBags,
             sandCuFt: Math.ceil(sandCuFt),
             aggregateCuFt: Math.ceil(aggregateCuFt),
             steelKg: steelWeightKg,
+            effectiveSteelPct,
             waterLiters,
             materials,
             totalMaterialsCost: parseFloat(totalMaterialsCost.toFixed(2))
         };
 
-        // If project ID is provided, save materials to DB
         if (projectId) {
             for (const mat of materials) {
                 await db.materials.create({
@@ -210,13 +248,12 @@ router.post('/materials', async (req, res) => {
     }
 });
 
-// 3. Plastering & Finishing Estimator
+// 3. Plastering & Surface Finishing Estimator
 router.post('/plaster', async (req, res) => {
     const { 
         areaSqFt, 
         thicknessMm = 12, 
         mixRatio = '1:4', 
-        coatType = 'single',
         projectId 
     } = req.body;
 
@@ -230,8 +267,8 @@ router.post('/plaster', async (req, res) => {
         const wetVolumeFt = area * thicknessFt;
         const dryVolumeFt = wetVolumeFt * 1.33; // 33% compaction factor
 
-        const parts = mixRatio === '1:4' ? 5 : 7; // 1:4 or 1:6
-        const sandMultiplier = mixRatio === '1:4' ? 4 : 6;
+        const parts = mixRatio === '1:3' ? 4 : (mixRatio === '1:4' ? 5 : 7);
+        const sandMultiplier = parts - 1;
         
         const cementCuFt = dryVolumeFt * (1 / parts);
         const sandCuFt = dryVolumeFt * (sandMultiplier / parts);
@@ -245,6 +282,7 @@ router.post('/plaster', async (req, res) => {
         const responseData = {
             areaSqFt: area,
             thicknessMm,
+            mixRatio,
             wetVolumeCuFt: parseFloat(wetVolumeFt.toFixed(2)),
             dryVolumeCuFt: parseFloat(dryVolumeFt.toFixed(2)),
             cementBags,
@@ -261,90 +299,201 @@ router.post('/plaster', async (req, res) => {
     }
 });
 
-// 4. Overall Building BOQ & Cost Estimator
-router.post('/cost', async (req, res) => {
-    const { projectId, materialCost, laborCost, transportCost = 0, miscCost = 0, builtUpAreaSqFt, qualityTier = 'standard' } = req.body;
+// 4. Steel Bar Bending Schedule (BBS) Calculator
+router.post('/steel', async (req, res) => {
+    const { 
+        barDiameterMm = 12, // 8, 10, 12, 16, 20, 25, 32
+        totalLengthMeters,
+        numberOfBars = 1,
+        ratePerKg = 65,
+        projectId
+    } = req.body;
+
+    if (!totalLengthMeters) {
+        return res.status(400).json({ error: 'Total length in meters is required' });
+    }
 
     try {
-        let mc = parseFloat(materialCost || 0);
-        let lc = parseFloat(laborCost || 0);
-        let tc = parseFloat(transportCost || 0);
-        let miscc = parseFloat(miscCost || 0);
+        const d = parseFloat(barDiameterMm);
+        const len = parseFloat(totalLengthMeters);
+        const count = parseInt(numberOfBars || 1);
 
-        // If builtUpAreaSqFt is provided, calculate automatic benchmark BOQ
-        let boqBreakdown = null;
-        if (builtUpAreaSqFt && parseFloat(builtUpAreaSqFt) > 0) {
-            const area = parseFloat(builtUpAreaSqFt);
-            const ratePerSqFt = qualityTier === 'luxury' ? 2600 : qualityTier === 'premium' ? 1950 : 1450;
-            const totalBuildingEstimate = area * ratePerSqFt;
+        // Standard civil engineering unit weight formula: d^2 / 162 (kg per meter)
+        const unitWeightKgPerM = (d * d) / 162.2;
+        const totalWeightKg = parseFloat((unitWeightKgPerM * len * count).toFixed(2));
+        const totalWeightTons = parseFloat((totalWeightKg / 1000).toFixed(3));
+        
+        // Binding wire estimate (~10 kg per Metric Ton of rebar)
+        const bindingWireKg = Math.max(1, Math.ceil(totalWeightTons * 10));
+        
+        const steelCost = parseFloat((totalWeightKg * parseFloat(ratePerKg || 65)).toFixed(2));
+        const bindingWireCost = bindingWireKg * 90;
+        const totalCost = steelCost + bindingWireCost;
 
-            boqBreakdown = {
-                builtUpAreaSqFt: area,
-                ratePerSqFt,
-                totalEstimate: totalBuildingEstimate,
-                stages: [
-                    { stage: '1. Excavation & Foundation Work', percentage: 12, cost: totalBuildingEstimate * 0.12 },
-                    { stage: '2. RCC Structure (Columns, Beams, Slabs)', percentage: 34, cost: totalBuildingEstimate * 0.34 },
-                    { stage: '3. Brickwork & Masonry Walls', percentage: 17, cost: totalBuildingEstimate * 0.17 },
-                    { stage: '4. Internal/External Plaster & Putty', percentage: 9, cost: totalBuildingEstimate * 0.09 },
-                    { stage: '5. Flooring, Tiles & Granite', percentage: 10, cost: totalBuildingEstimate * 0.10 },
-                    { stage: '6. Electrical & Plumbing (MEP)', percentage: 11, cost: totalBuildingEstimate * 0.11 },
-                    { stage: '7. Doors, Windows, Paint & Handover', percentage: 7, cost: totalBuildingEstimate * 0.07 }
-                ]
-            };
+        const responseData = {
+            barDiameterMm: d,
+            totalLengthMeters: len,
+            numberOfBars: count,
+            unitWeightKgPerM: parseFloat(unitWeightKgPerM.toFixed(3)),
+            totalWeightKg,
+            totalWeightTons,
+            bindingWireKg,
+            steelCost,
+            bindingWireCost,
+            totalCost
+        };
 
-            if (mc === 0 && lc === 0) {
-                mc = totalBuildingEstimate * 0.65;
-                lc = totalBuildingEstimate * 0.25;
-                tc = totalBuildingEstimate * 0.05;
-                miscc = totalBuildingEstimate * 0.05;
-            }
-        }
+        res.json(responseData);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
-        const totalCost = mc + lc + tc + miscc;
+// 5. Flooring & Tiling Estimator
+router.post('/tiling', async (req, res) => {
+    const { 
+        floorAreaSqFt, 
+        tileLengthFt = 2, 
+        tileWidthFt = 2, 
+        wastagePercent = 8,
+        tileBoxPrice = 850,
+        tilesPerBox = 4,
+        laborRateSqFt = 24,
+        projectId
+    } = req.body;
 
-        const estimation = {
-            projectId: projectId || null,
-            materialCost: mc,
-            laborCost: lc,
-            transportCost: tc,
-            miscCost: miscc,
-            totalEstimatedCost: totalCost,
-            boqBreakdown
+    if (!floorAreaSqFt) {
+        return res.status(400).json({ error: 'Floor area in sq ft is required' });
+    }
+
+    try {
+        const area = parseFloat(floorAreaSqFt);
+        const tArea = parseFloat(tileLengthFt) * parseFloat(tileWidthFt);
+        const baseTiles = Math.ceil(area / tArea);
+        const wasteTiles = Math.ceil(baseTiles * (parseFloat(wastagePercent || 8) / 100));
+        const totalTiles = baseTiles + wasteTiles;
+
+        const boxCount = Math.ceil(totalTiles / parseInt(tilesPerBox || 4));
+        const tileCost = boxCount * parseFloat(tileBoxPrice || 850);
+        
+        // Mortar / Adhesive bags (1 bag of 20kg per 40 sq ft)
+        const adhesiveBags = Math.ceil(area / 40);
+        const adhesiveCost = adhesiveBags * 350;
+
+        // Epoxy / Cement Grout (1 kg per 60 sq ft)
+        const groutKg = Math.ceil(area / 60);
+        const groutCost = groutKg * 80;
+
+        const laborCost = Math.ceil(area * parseFloat(laborRateSqFt || 24));
+        const totalCost = tileCost + adhesiveCost + groutCost + laborCost;
+
+        const responseData = {
+            floorAreaSqFt: area,
+            tileSize: `${tileLengthFt} × ${tileWidthFt} ft`,
+            totalTiles,
+            boxesRequired: boxCount,
+            adhesiveBags,
+            groutKg,
+            tileCost,
+            adhesiveCost,
+            groutCost,
+            laborCost,
+            totalCost
+        };
+
+        res.json(responseData);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 6. Comprehensive BOQ & Building Cost Calculator
+router.post('/cost', async (req, res) => {
+    const { 
+        builtUpArea, 
+        qualityTier = 'standard', // 'economy', 'standard', 'premium', 'luxury'
+        floorsCount = 1,
+        projectId 
+    } = req.body;
+
+    if (!builtUpArea) {
+        return res.status(400).json({ error: 'Built-up area is required' });
+    }
+
+    try {
+        const area = parseFloat(builtUpArea);
+        const floors = parseInt(floorsCount || 1);
+        const totalBuiltUp = area * floors;
+
+        // Benchmark Indian Construction Cost per Sq Ft (2026 rates)
+        const rateCards = {
+            'economy': 1600,
+            'standard': 2100,
+            'premium': 2850,
+            'luxury': 3800
+        };
+
+        const baseRate = rateCards[qualityTier] || 2100;
+        const totalEstimatedBudget = totalBuiltUp * baseRate;
+
+        // Professional Civil Phase Allocation Breakdown
+        const phases = [
+            { phase: '1. Site Clearance & Earthwork', percent: 4, cost: totalEstimatedBudget * 0.04 },
+            { phase: '2. Substructure & Foundation (RCC)', percent: 14, cost: totalEstimatedBudget * 0.14 },
+            { phase: '3. Superstructure Columns & Slabs', percent: 22, cost: totalEstimatedBudget * 0.22 },
+            { phase: '4. Brickwork & Masonry Partitions', percent: 13, cost: totalEstimatedBudget * 0.13 },
+            { phase: '5. Doors, Windows & Glazing', percent: 7, cost: totalEstimatedBudget * 0.07 },
+            { phase: '6. Internal/External Plaster & Putty', percent: 8, cost: totalEstimatedBudget * 0.08 },
+            { phase: '7. Vitrified Flooring & Wall Tiles', percent: 9, cost: totalEstimatedBudget * 0.09 },
+            { phase: '8. Plumbing, Sanitation & Electrical MEP', percent: 11, cost: totalEstimatedBudget * 0.11 },
+            { phase: '9. Exterior Facade & Interior Painting', percent: 7, cost: totalEstimatedBudget * 0.07 },
+            { phase: '10. Final Handover, Fixtures & Misc', percent: 5, cost: totalEstimatedBudget * 0.05 }
+        ];
+
+        const responseData = {
+            builtUpAreaPerFloor: area,
+            floorsCount: floors,
+            totalBuiltUpArea: totalBuiltUp,
+            qualityTier,
+            ratePerSqFt: baseRate,
+            totalEstimatedBudget,
+            phases
         };
 
         if (projectId) {
-            await db.costEstimations.create(estimation);
+            await db.costEstimations.create({
+                projectId,
+                materialCost: totalEstimatedBudget * 0.60,
+                laborCost: totalEstimatedBudget * 0.25,
+                transportCost: totalEstimatedBudget * 0.08,
+                miscCost: totalEstimatedBudget * 0.07,
+                totalEstimatedCost: totalEstimatedBudget
+            });
         }
 
-        res.json(estimation);
+        res.json(responseData);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// 5. Get saved project estimations
+// 7. Get Project Estimations
 router.get('/project/:projectId', async (req, res) => {
-    const { projectId } = req.params;
     try {
+        const { projectId } = req.params;
         const bricks = await db.brickEstimations.listByProject(projectId);
         const materials = await db.materials.listByProject(projectId);
         const costs = await db.costEstimations.listByProject(projectId);
-
-        res.json({
-            bricks: bricks || [],
-            materials: materials || [],
-            costs: costs || []
-        });
+        res.json({ bricks, materials, costs });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// 6. Delete a saved estimation item
+// 8. Delete Estimation
 router.delete('/:type/:id', async (req, res) => {
-    const { type, id } = req.params;
     try {
+        const { type, id } = req.params;
         let success = false;
         if (type === 'brick' || type === 'bricks') {
             success = await db.brickEstimations.delete(id);
@@ -353,7 +502,7 @@ router.delete('/:type/:id', async (req, res) => {
         } else if (type === 'cost' || type === 'costs') {
             success = await db.costEstimations.delete(id);
         }
-        res.json({ success });
+        res.json({ success, message: `${type} estimation deleted` });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

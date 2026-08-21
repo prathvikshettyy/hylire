@@ -145,6 +145,46 @@
       "unitCost": 65,
       "totalCost": 108420,
       "createdAt": "2026-08-20T17:38:55.627Z"
+    },
+    {
+      "id": "m-1787324723205-770",
+      "projectId": "p-101",
+      "name": "Cement (OPC/PPC 50kg)",
+      "quantity": 112,
+      "unit": "bags",
+      "unitCost": 380,
+      "totalCost": 42560,
+      "createdAt": "2026-08-21T15:05:23.205Z"
+    },
+    {
+      "id": "m-1787324723206-480",
+      "projectId": "p-101",
+      "name": "River Sand / M-Sand",
+      "quantity": 210,
+      "unit": "cu ft",
+      "unitCost": 45,
+      "totalCost": 9450,
+      "createdAt": "2026-08-21T15:05:23.206Z"
+    },
+    {
+      "id": "m-1787324723208-496",
+      "projectId": "p-101",
+      "name": "Coarse Aggregate (20mm)",
+      "quantity": 420,
+      "unit": "cu ft",
+      "unitCost": 55,
+      "totalCost": 23100,
+      "createdAt": "2026-08-21T15:05:23.208Z"
+    },
+    {
+      "id": "m-1787324723211-572",
+      "projectId": "p-101",
+      "name": "TMT Steel Rebar (Fe500D)",
+      "quantity": 1668,
+      "unit": "kg",
+      "unitCost": 65,
+      "totalCost": 108420,
+      "createdAt": "2026-08-21T15:05:23.211Z"
     }
   ],
   "brickEstimations": [
