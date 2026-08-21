@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { CheckSquare, Plus, Calendar, AlertCircle, ArrowRight, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { localTasks, localSites, localProjects, getLocalStore } from '../utils/localStore';
 
 const Tasks = () => {
   const { user, token, apiBaseUrl } = useAuth();
-  const [tasks, setTasks] = useState([]);
-  const [sites, setSites] = useState([]);
-  const [team, setTeam] = useState([]);
-  const [selectedSiteId, setSelectedSiteId] = useState('');
+  const [sites, setSites] = useState(() => localSites.list());
+  const [projects, setProjects] = useState(() => localProjects.list());
+  const [selectedSiteId, setSelectedSiteId] = useState(() => {
+    const s = localSites.list();
+    return s.length > 0 ? s[0].id : '';
+  });
+  const [tasks, setTasks] = useState(() => {
+    const s = localSites.list();
+    return s.length > 0 ? localTasks.list(s[0].id) : localTasks.list();
+  });
+  const [team, setTeam] = useState(() => getLocalStore().users.filter(u => u.role !== 'client'));
   const [loading, setLoading] = useState(false);
 
   // Form states
@@ -19,89 +27,59 @@ const Tasks = () => {
   const [deadline, setDeadline] = useState('');
   const [siteId, setSiteId] = useState('');
 
-  const [projects, setProjects] = useState([]);
-
   const fetchData = async () => {
-    setLoading(true);
+    // 1. Instantly load local data
+    const localS = localSites.list();
+    const localP = localProjects.list();
+    setSites(localS);
+    setProjects(localP);
+    if (localS.length > 0 && !selectedSiteId) {
+      setSelectedSiteId(localS[0].id);
+      setSiteId(localS[0].id);
+    }
+
+    // 2. Sync with API
     try {
-      // 1. Fetch projects & sites concurrently
       const [projRes, siteRes, teamRes] = await Promise.all([
         fetch(`${apiBaseUrl}/projects`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${apiBaseUrl}/sites`, { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch(`${apiBaseUrl}/auth/list`, { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
-      let fetchedProjects = [];
-      let fetchedSites = [];
-
       if (projRes.ok) {
-        fetchedProjects = await projRes.json();
-        setProjects(fetchedProjects);
+        const pData = await projRes.json();
+        if (pData?.length > 0) setProjects(pData);
       }
-
       if (siteRes.ok) {
-        fetchedSites = await siteRes.json();
+        const sData = await siteRes.json();
+        if (sData?.length > 0) setSites(sData);
       }
-
-      // Combine sites and ensure every project has at least one site representation
-      const allSites = [...fetchedSites];
-      fetchedProjects.forEach(p => {
-        const hasSite = fetchedSites.some(s => s.projectId === p.id);
-        if (!hasSite) {
-          allSites.push({
-            id: `auto-site-${p.id}`,
-            projectId: p.id,
-            name: `${p.name} - Main Site`,
-            address: 'Primary Site',
-            isAuto: true
-          });
-        }
-      });
-
-      setSites(allSites);
-      if (allSites.length > 0) {
-        setSelectedSiteId(allSites[0].id);
-        setSiteId(allSites[0].id);
-      }
-
       if (teamRes.ok) {
-        const data = await teamRes.json();
-        setTeam(data.filter(u => u.role !== 'client'));
+        const tData = await teamRes.json();
+        setTeam(tData.filter(u => u.role !== 'client'));
       }
     } catch (err) {
-      console.warn('API down or offline mode. Starting with clean tasks list.');
-      setProjects([]);
-      setSites([]);
-      setTasks([]);
-      setTeam([
-        { id: "u-2", fullName: "Sarah Engineer", role: "engineer" },
-        { id: "u-4", fullName: "Mark Contractor", role: "contractor" },
-        { id: "u-5", fullName: "David Worker", role: "worker" }
-      ]);
-    } finally {
-      setLoading(false);
+      // Offline / Vercel mode: local data already active
     }
   };
 
   const fetchTasks = async () => {
     if (!selectedSiteId) return;
+    // 1. Load local tasks instantly
+    const lt = localTasks.list(selectedSiteId);
+    setTasks(lt);
+
+    // 2. Sync with API
     try {
       const res = await fetch(`${apiBaseUrl}/tasks?siteId=${selectedSiteId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setTasks(data);
+        if (data?.length > 0) setTasks(data);
       }
     } catch (err) {
-      // Offline fallback tasks matching selectedSiteId
-      const allMockTasks = [
-        { id: "t-1", siteId: "s-1", name: "Soil Excavation & Grading", description: "Grade the foundation area and clear soil.", assignedTo: "u-5", status: "done", priority: "high", deadline: "2026-08-10" },
-        { id: "t-2", siteId: "s-1", name: "Concrete Pouring - Level 1", description: "Pour concrete slab for the main tower base.", assignedTo: "u-2", status: "in-progress", priority: "high", deadline: "2026-08-20" },
-        { id: "t-3", siteId: "s-2", name: "Rebar Installation & Welding", description: "Assemble steel support framework.", assignedTo: "u-4", status: "todo", priority: "medium", deadline: "2026-08-30" },
-        { id: "t-4", siteId: "s-3", name: "Site Clearance & Boundary Setup", description: "Erect safety barricades and deploy cabin.", assignedTo: "u-5", status: "todo", priority: "low", deadline: "2026-09-01" }
-      ];
-      setTasks(allMockTasks.filter(t => t.siteId === selectedSiteId));
+      // Offline mode
     }
   };
 
@@ -146,10 +124,16 @@ const Tasks = () => {
       }
     }
 
-    const payload = { siteId: targetSiteId, name, description, assignedTo, priority, deadline };
+    const payload = { siteId: targetSiteId, name, description, assignedTo, priority, deadline, stage: 'todo', status: 'todo' };
 
+    // 1. Save directly to local storage
+    localTasks.create(payload);
+    setTasks(localTasks.list(selectedSiteId));
+    resetForm();
+
+    // 2. Sync with API in background
     try {
-      const res = await fetch(`${apiBaseUrl}/tasks`, {
+      await fetch(`${apiBaseUrl}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -157,29 +141,8 @@ const Tasks = () => {
         },
         body: JSON.stringify(payload)
       });
-      if (res.ok) {
-        const newTask = await res.json();
-        if (targetSiteId === selectedSiteId || siteId === selectedSiteId) {
-          setTasks([...tasks, newTask]);
-        }
-        resetForm();
-      }
     } catch (err) {
-      console.warn('Offline mode: creating mock task.');
-      const newTask = {
-        id: `t-${Date.now()}`,
-        siteId: targetSiteId,
-        name,
-        description,
-        assignedTo: assignedTo || 'u-5',
-        status: 'todo',
-        priority,
-        deadline: deadline || new Date().toISOString().split('T')[0]
-      };
-      if (targetSiteId === selectedSiteId || siteId === selectedSiteId) {
-        setTasks([...tasks, newTask]);
-      }
-      resetForm();
+      // Offline mode
     }
   };
 
@@ -188,8 +151,13 @@ const Tasks = () => {
     const nextStatus = statusFlow[currentStatus];
     if (!nextStatus) return;
 
+    // 1. Update local storage directly
+    localTasks.updateStage(id, nextStatus);
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, status: nextStatus, stage: nextStatus } : t));
+
+    // 2. Sync with API
     try {
-      const res = await fetch(`${apiBaseUrl}/tasks/${id}`, {
+      await fetch(`${apiBaseUrl}/tasks/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -197,11 +165,8 @@ const Tasks = () => {
         },
         body: JSON.stringify({ status: nextStatus })
       });
-      if (res.ok) {
-        setTasks(tasks.map(t => t.id === id ? { ...t, status: nextStatus } : t));
-      }
     } catch (err) {
-      setTasks(tasks.map(t => t.id === id ? { ...t, status: nextStatus } : t));
+      // Offline mode
     }
   };
 

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase, Calendar, IndianRupee, Plus, Trash, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { localProjects, getLocalStore } from '../utils/localStore';
 
 const Projects = () => {
   const { user, token, apiBaseUrl } = useAuth();
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState(() => localProjects.list());
   const [loading, setLoading] = useState(false);
   
   // Form states
@@ -15,22 +16,26 @@ const Projects = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [clientId, setClientId] = useState('');
-  const [usersList, setUsersList] = useState([]);
+  const [usersList, setUsersList] = useState(() => getLocalStore().users.filter(u => u.role === 'client'));
 
   // Fetch projects and users
   const fetchData = async () => {
-    setLoading(true);
+    // 1. Instantly load from local storage
+    const current = localProjects.list();
+    setProjects(current);
+
+    // 2. Sync with API if reachable
     try {
-      // 1. Fetch Projects
       const projRes = await fetch(`${apiBaseUrl}/projects`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (projRes.ok) {
         const data = await projRes.json();
-        setProjects(data);
+        if (data && data.length > 0) {
+          setProjects(data);
+        }
       }
 
-      // 2. Fetch Users list for dropdowns
       const userRes = await fetch(`${apiBaseUrl}/auth/list`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -39,14 +44,7 @@ const Projects = () => {
         setUsersList(data.filter(u => u.role === 'client'));
       }
     } catch (err) {
-      console.warn('API error or offline mode. Starting with clean project list.');
-      // Local fallback data (empty state)
-      setProjects([]);
-      setUsersList([
-        { id: "u-3", fullName: "Robert Client", role: "client", email: "client@hylire.com" }
-      ]);
-    } finally {
-      setLoading(false);
+      // Offline / Vercel mode: localProjects are already loaded
     }
   };
 
@@ -60,8 +58,14 @@ const Projects = () => {
 
     const payload = { name, description, budget, startDate, endDate, clientId };
 
+    // 1. Save directly into persistent local store (persists across Vercel & restarts)
+    const newProj = localProjects.create(payload);
+    setProjects(localProjects.list());
+    resetForm();
+
+    // 2. Sync to backend API if active
     try {
-      const res = await fetch(`${apiBaseUrl}/projects`, {
+      await fetch(`${apiBaseUrl}/projects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,42 +73,26 @@ const Projects = () => {
         },
         body: JSON.stringify(payload)
       });
-
-      if (res.ok) {
-        const newProj = await res.json();
-        setProjects([...projects, newProj]);
-        resetForm();
-      }
     } catch (err) {
-      console.warn('Offline mode: Creating local mock project entry.');
-      const newProj = {
-        id: `p-${Date.now()}`,
-        name,
-        description,
-        budget: parseFloat(budget) || 0,
-        startDate: startDate || new Date().toISOString().split('T')[0],
-        endDate: endDate || '',
-        clientId: clientId || 'u-3',
-        status: 'planning'
-      };
-      setProjects([...projects, newProj]);
-      resetForm();
+      // Background sync silently ignored in offline / static deployment
     }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this project? All sub-sites will be affected.')) return;
+    
+    // 1. Delete locally from persistent store
+    localProjects.delete(id);
+    setProjects(localProjects.list());
+
+    // 2. Sync delete with API
     try {
-      const res = await fetch(`${apiBaseUrl}/projects/${id}`, {
+      await fetch(`${apiBaseUrl}/projects/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) {
-        setProjects(projects.filter(p => p.id !== id));
-      }
     } catch (err) {
-      console.warn('Offline mode: Removing local mock project.');
-      setProjects(projects.filter(p => p.id !== id));
+      // Handled offline
     }
   };
 

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, HardHat, Plus, Clipboard, UserCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { localSites, localProjects, getLocalStore } from '../utils/localStore';
 
 const Sites = () => {
   const { user, token, apiBaseUrl } = useAuth();
-  const [sites, setSites] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [engineers, setEngineers] = useState([]);
+  const [sites, setSites] = useState(() => localSites.list());
+  const [projects, setProjects] = useState(() => localProjects.list());
+  const [engineers, setEngineers] = useState(() => getLocalStore().users.filter(u => u.role === 'engineer' || u.role === 'contractor'));
   const [loading, setLoading] = useState(false);
 
   // Form states
@@ -17,27 +18,28 @@ const Sites = () => {
   const [engineerId, setEngineerId] = useState('');
 
   const fetchData = async () => {
-    setLoading(true);
+    // 1. Instantly load local data
+    setSites(localSites.list());
+    setProjects(localProjects.list());
+
+    // 2. Sync with API if active
     try {
-      // 1. Fetch Projects
       const projRes = await fetch(`${apiBaseUrl}/projects`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (projRes.ok) {
         const data = await projRes.json();
-        setProjects(data);
+        if (data?.length > 0) setProjects(data);
       }
 
-      // 2. Fetch Sites
       const siteRes = await fetch(`${apiBaseUrl}/sites`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (siteRes.ok) {
         const data = await siteRes.json();
-        setSites(data);
+        if (data?.length > 0) setSites(data);
       }
 
-      // 3. Fetch Engineers List
       const userRes = await fetch(`${apiBaseUrl}/auth/list`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -46,16 +48,7 @@ const Sites = () => {
         setEngineers(data.filter(u => u.role === 'engineer' || u.role === 'contractor'));
       }
     } catch (err) {
-      console.warn('API connection failed or offline mode. Starting with clean sites list.');
-      // Local fallback data (empty state)
-      setProjects([]);
-      setSites([]);
-      setEngineers([
-        { id: "u-2", fullName: "Sarah Engineer", role: "engineer" },
-        { id: "u-4", fullName: "Mark Contractor", role: "contractor" }
-      ]);
-    } finally {
-      setLoading(false);
+      // Offline / Vercel mode: local data already active
     }
   };
 
@@ -69,8 +62,14 @@ const Sites = () => {
 
     const payload = { projectId, name, address, engineerId };
 
+    // 1. Save directly to local store
+    localSites.create(payload);
+    setSites(localSites.list());
+    resetForm();
+
+    // 2. Sync to API if active
     try {
-      const res = await fetch(`${apiBaseUrl}/sites`, {
+      await fetch(`${apiBaseUrl}/sites`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,29 +77,19 @@ const Sites = () => {
         },
         body: JSON.stringify(payload)
       });
-      if (res.ok) {
-        const newSite = await res.json();
-        setSites([...sites, newSite]);
-        resetForm();
-      }
     } catch (err) {
-      console.warn('Offline mode: creating mock site.');
-      const newSite = {
-        id: `s-${Date.now()}`,
-        projectId,
-        name,
-        address: address || 'Onsite',
-        engineerId: engineerId || 'u-2',
-        status: 'active'
-      };
-      setSites([...sites, newSite]);
-      resetForm();
+      // Offline mode
     }
   };
 
   const handleStatusChange = async (id, newStatus) => {
+    // 1. Update local store
+    localSites.updateStatus(id, newStatus);
+    setSites(localSites.list());
+
+    // 2. Sync with API
     try {
-      const res = await fetch(`${apiBaseUrl}/sites/${id}`, {
+      await fetch(`${apiBaseUrl}/sites/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -108,12 +97,8 @@ const Sites = () => {
         },
         body: JSON.stringify({ status: newStatus })
       });
-      if (res.ok) {
-        setSites(sites.map(s => s.id === id ? { ...s, status: newStatus } : s));
-      }
     } catch (err) {
-      console.warn('Offline mode: Updating mock status.');
-      setSites(sites.map(s => s.id === id ? { ...s, status: newStatus } : s));
+      // Offline mode
     }
   };
 

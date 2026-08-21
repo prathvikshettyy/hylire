@@ -20,6 +20,7 @@ import {
   Plus
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { localDocuments, localProjects } from '../utils/localStore';
 
 const CATEGORIES = [
   { id: 'all', label: 'All Files' },
@@ -33,9 +34,15 @@ const CATEGORIES = [
 
 const Documents = () => {
   const { user, token, apiBaseUrl } = useAuth();
-  const [documents, setDocuments] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [projects, setProjects] = useState(() => localProjects.list());
+  const [selectedProjectId, setSelectedProjectId] = useState(() => {
+    const list = localProjects.list();
+    return list.length > 0 ? list[0].id : '';
+  });
+  const [documents, setDocuments] = useState(() => {
+    const list = localProjects.list();
+    return list.length > 0 ? localDocuments.listByProject(list[0].id) : [];
+  });
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -59,41 +66,40 @@ const Documents = () => {
   };
 
   const fetchProjects = async () => {
+    const lp = localProjects.list();
+    setProjects(lp);
+    if (lp.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(lp[0].id);
+    }
+
     try {
       const res = await fetch(`${apiBaseUrl}/projects`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setProjects(data);
-        if (data.length > 0 && !selectedProjectId) {
-          setSelectedProjectId(data[0].id);
-        }
+        if (data?.length > 0) setProjects(data);
       }
     } catch (err) {
-      setProjects([]);
-      setSelectedProjectId('');
+      // Offline mode
     }
   };
 
   const fetchDocs = async () => {
-    if (!selectedProjectId) {
-      setDocuments([]);
-      return;
-    }
-    setLoading(true);
+    if (!selectedProjectId) return;
+    const ld = localDocuments.listByProject(selectedProjectId);
+    setDocuments(ld);
+
     try {
       const res = await fetch(`${apiBaseUrl}/documents/project/${selectedProjectId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setDocuments(data || []);
+        if (data?.length > 0) setDocuments(data);
       }
     } catch (err) {
-      setDocuments([]);
-    } finally {
-      setLoading(false);
+      // Offline mode
     }
   };
 
@@ -146,13 +152,23 @@ const Documents = () => {
       name: customDocName || (selectedFile ? selectedFile.name : 'Document.pdf'),
       fileType: selectedFile ? selectedFile.type : 'application/pdf',
       fileSize: selectedFile ? formatBytes(selectedFile.size) : '240 KB',
+      fileUrl: fileDataUrl,
       fileData: fileDataUrl,
       category: docCategory,
       uploadedBy: user ? (user.fullName || user.email) : 'Engineer'
     };
 
+    // 1. Save directly to local storage
+    const newDoc = localDocuments.create(payload);
+    setDocuments(localDocuments.listByProject(selectedProjectId));
+    setSelectedFile(null);
+    setCustomDocName('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setMsg('File uploaded and securely archived in the Document Vault!');
+
+    // 2. Sync with API
     try {
-      const res = await fetch(`${apiBaseUrl}/documents/upload`, {
+      await fetch(`${apiBaseUrl}/documents/upload`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,38 +176,29 @@ const Documents = () => {
         },
         body: JSON.stringify(payload)
       });
-      if (res.ok) {
-        const data = await res.json();
-        setDocuments(prev => [...prev, data.document]);
-        setSelectedFile(null);
-        setCustomDocName('');
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        setMsg('File uploaded and securely archived in the Document Vault!');
-      } else {
-        const errData = await res.json();
-        alert(errData.error || 'Upload failed');
-      }
     } catch (err) {
-      console.error('Upload error:', err);
+      // Handled offline
     } finally {
       setUploading(false);
     }
   };
 
-  // Delete document
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to permanently delete this document?')) return;
+    
+    // 1. Delete from local storage
+    localDocuments.delete(id);
+    setDocuments(localDocuments.listByProject(selectedProjectId));
+    setMsg('Document permanently removed from vault.');
+
+    // 2. Sync with API
     try {
-      const res = await fetch(`${apiBaseUrl}/documents/${id}`, {
+      await fetch(`${apiBaseUrl}/documents/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) {
-        setDocuments(prev => prev.filter(d => d.id !== id));
-        setMsg('Document permanently removed from vault.');
-      }
     } catch (err) {
-      console.error('Delete error:', err);
+      // Handled offline
     }
   };
 

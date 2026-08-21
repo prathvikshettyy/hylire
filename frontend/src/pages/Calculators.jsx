@@ -15,12 +15,16 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { localProjects, localEstimations } from '../utils/localStore';
 
 const Calculators = () => {
   const { token, apiBaseUrl } = useAuth();
   const [activeTab, setActiveTab] = useState('bricks');
-  const [projects, setProjects] = useState([]);
-  const [projectId, setProjectId] = useState('');
+  const [projects, setProjects] = useState(() => localProjects.list());
+  const [projectId, setProjectId] = useState(() => {
+    const list = localProjects.list();
+    return list.length > 0 ? list[0].id : '';
+  });
   const [saveSuccess, setSaveSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -62,39 +66,48 @@ const Calculators = () => {
   const [costResult, setCostResult] = useState(null);
 
   // 5. Saved Estimations History
-  const [savedEstimates, setSavedEstimates] = useState({ bricks: [], materials: [], costs: [] });
+  const [savedEstimates, setSavedEstimates] = useState(() => {
+    const list = localProjects.list();
+    return list.length > 0 ? localEstimations.listByProject(list[0].id) : { bricks: [], materials: [], costs: [] };
+  });
 
   // Load projects list
   const fetchProjects = async () => {
+    const localP = localProjects.list();
+    setProjects(localP);
+    if (localP.length > 0 && !projectId) {
+      setProjectId(localP[0].id);
+    }
+
     try {
       const res = await fetch(`${apiBaseUrl}/projects`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setProjects(data);
-        if (data.length > 0 && !projectId) {
-          setProjectId(data[0].id);
-        }
+        if (data?.length > 0) setProjects(data);
       }
     } catch (err) {
-      console.warn('Projects fetch failed:', err.message);
+      // Offline mode
     }
   };
 
   // Fetch saved project estimates
   const fetchSavedEstimates = async (pId) => {
     if (!pId) return;
+    const localE = localEstimations.listByProject(pId);
+    setSavedEstimates(localE);
+
     try {
       const res = await fetch(`${apiBaseUrl}/estimation/project/${pId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setSavedEstimates(data);
+        if (data) setSavedEstimates(data);
       }
     } catch (err) {
-      console.warn('Saved estimates fetch failed:', err.message);
+      // Offline mode
     }
   };
 

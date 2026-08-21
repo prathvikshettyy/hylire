@@ -11,36 +11,33 @@ import {
   PieChart
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { computeDashboardStats } from '../utils/localStore';
 
 const Dashboard = () => {
   const { token, apiBaseUrl } = useAuth();
-  const [stats, setStats] = useState({
-    totalProjects: 0,
-    activeSites: 0,
-    totalTasks: 0,
-    completedTasks: 0,
-    totalBudget: 0,
-    siteStats: [],
-    projectComparison: [],
-    monthlyExpenditure: []
-  });
+  const [stats, setStats] = useState(() => computeDashboardStats());
   const [loading, setLoading] = useState(false);
   const [activeHoverPoint, setActiveHoverPoint] = useState(null);
 
   const fetchStats = async () => {
-    setLoading(true);
+    // 1. Instantly compute stats from local storage
+    const localData = computeDashboardStats();
+    setStats(localData);
+
+    // 2. If API backend is available, sync with API
     try {
       const res = await fetch(`${apiBaseUrl}/monitoring/stats`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setStats(data);
+        // If API returns active data, prioritize it
+        if (data && (data.totalProjects > 0 || data.projectComparison?.length > 0)) {
+          setStats(data);
+        }
       }
     } catch (err) {
-      console.warn('Unable to reach backend API for dashboard stats.');
-    } finally {
-      setLoading(false);
+      // On Vercel / offline mode, localData is already active and accurate
     }
   };
 

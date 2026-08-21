@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [apiBaseUrl] = useState('http://localhost:5000/api');
+  const [apiBaseUrl] = useState(import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
 
   useEffect(() => {
     // Check localStorage for existing session
