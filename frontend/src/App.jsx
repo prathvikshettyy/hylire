@@ -1,7 +1,9 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import Navigation from './components/Navigation';
+import { Sun, Moon } from 'lucide-react';
 
 // Pages
 import Login from './pages/Login';
@@ -33,6 +35,7 @@ const PrivateRoute = ({ children }) => {
 // Main Layout Wrapper for Authenticated Users
 const AppLayout = ({ children }) => {
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   
   return (
     <div className="app-container">
@@ -49,11 +52,32 @@ const AppLayout = ({ children }) => {
       <div className="app-content">
         <header className="header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '4px 10px', borderRadius: 12 }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'var(--form-input-bg)', border: '1px solid var(--border-color)', padding: '4px 10px', borderRadius: 12 }}>
               Secure Network Status: Online
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button 
+              onClick={toggleTheme} 
+              style={{
+                background: 'var(--btn-secondary-bg)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '10px',
+                padding: '8px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: 'var(--text-primary)',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                transition: 'var(--transition-smooth)'
+              }}
+              title={`Switch to ${theme === 'dark' ? 'Cream' : 'Dark'} Theme`}
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              <span>{theme === 'dark' ? 'Cream Mode' : 'Dark Mode'}</span>
+            </button>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
               Logged in as: <strong style={{ color: 'var(--text-primary)' }}>{user?.fullName}</strong>
             </span>
@@ -67,8 +91,9 @@ const AppLayout = ({ children }) => {
 
 const App = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
         <Routes>
           {/* Public Authentication Routes */}
           <Route path="/login" element={<Login />} />
@@ -144,6 +169,7 @@ const App = () => {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+  </ThemeProvider>
   );
 };
 

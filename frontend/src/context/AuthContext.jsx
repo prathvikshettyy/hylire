@@ -18,9 +18,9 @@ export const AuthProvider = ({ children }) => {
   const [apiBaseUrl] = useState(import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
 
   useEffect(() => {
-    // Check localStorage for existing session
-    const savedUser = localStorage.getItem('hylire_user');
-    const savedToken = localStorage.getItem('hylire_token');
+    // Check sessionStorage for existing session
+    const savedUser = sessionStorage.getItem('hylire_user');
+    const savedToken = sessionStorage.getItem('hylire_token');
     
     if (savedUser && savedToken) {
       setUser(JSON.parse(savedUser));
@@ -41,8 +41,8 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         setUser(data.user);
         setToken(data.token);
-        localStorage.setItem('hylire_user', JSON.stringify(data.user));
-        localStorage.setItem('hylire_token', data.token);
+        sessionStorage.setItem('hylire_user', JSON.stringify(data.user));
+        sessionStorage.setItem('hylire_token', data.token);
         return { success: true };
       } else {
         const errData = await response.json();
@@ -60,8 +60,8 @@ export const AuthProvider = ({ children }) => {
         setUser(matchedMockUser);
         const mockToken = `mock-token-${matchedMockUser.id}-${Date.now()}`;
         setToken(mockToken);
-        localStorage.setItem('hylire_user', JSON.stringify(matchedMockUser));
-        localStorage.setItem('hylire_token', mockToken);
+        sessionStorage.setItem('hylire_user', JSON.stringify(matchedMockUser));
+        sessionStorage.setItem('hylire_token', mockToken);
         return { success: true };
       } else {
         return { success: false, error: 'Invalid credentials. Hint: use password123 with any email like engineer@hylire.com' };
@@ -93,8 +93,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('hylire_user');
-    localStorage.removeItem('hylire_token');
+    sessionStorage.removeItem('hylire_user');
+    sessionStorage.removeItem('hylire_token');
   };
 
   return (
