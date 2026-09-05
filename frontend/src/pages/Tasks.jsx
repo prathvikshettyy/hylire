@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckSquare, Plus, Calendar, AlertCircle, ArrowRight, User } from 'lucide-react';
+import { CheckSquare, Plus, Calendar, AlertCircle, ArrowRight, User, Building } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { localTasks, localSites, localProjects, getLocalStore } from '../utils/localStore';
 
@@ -25,7 +25,10 @@ const Tasks = () => {
   const [assignedTo, setAssignedTo] = useState('');
   const [priority, setPriority] = useState('medium');
   const [deadline, setDeadline] = useState('');
-  const [siteId, setSiteId] = useState('');
+  const [siteId, setSiteId] = useState(() => {
+    const s = localSites.list();
+    return s.length > 0 ? s[0].id : '';
+  });
 
   const fetchData = async () => {
     // 1. Instantly load local data
@@ -48,11 +51,22 @@ const Tasks = () => {
 
       if (projRes.ok) {
         const pData = await projRes.json();
-        if (pData?.length > 0) setProjects(pData);
+        if (Array.isArray(pData)) setProjects(pData);
       }
       if (siteRes.ok) {
         const sData = await siteRes.json();
-        if (sData?.length > 0) setSites(sData);
+        if (Array.isArray(sData)) {
+          setSites(sData);
+          if (sData.length > 0) {
+            setSelectedSiteId(curr => {
+              if (!curr || !sData.some(s => s.id === curr)) {
+                setSiteId(sData[0].id);
+                return sData[0].id;
+              }
+              return curr;
+            });
+          }
+        }
       }
       if (teamRes.ok) {
         const tData = await teamRes.json();
@@ -63,20 +77,24 @@ const Tasks = () => {
     }
   };
 
-  const fetchTasks = async () => {
-    if (!selectedSiteId) return;
+  const fetchTasks = async (overrideSiteId) => {
+    const targetId = overrideSiteId || selectedSiteId;
+    if (!targetId) {
+      setTasks([]);
+      return;
+    }
     // 1. Load local tasks instantly
-    const lt = localTasks.list(selectedSiteId);
+    const lt = localTasks.list(targetId);
     setTasks(lt);
 
     // 2. Sync with API
     try {
-      const res = await fetch(`${apiBaseUrl}/tasks?siteId=${selectedSiteId}`, {
+      const res = await fetch(`${apiBaseUrl}/tasks?siteId=${targetId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        if (data?.length > 0) setTasks(data);
+        if (Array.isArray(data)) setTasks(data);
       }
     } catch (err) {
       // Offline mode
@@ -88,52 +106,46 @@ const Tasks = () => {
   }, [token]);
 
   useEffect(() => {
-    fetchTasks();
+    if (selectedSiteId) {
+      fetchTasks(selectedSiteId);
+    } else {
+      setTasks([]);
+    }
   }, [selectedSiteId]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!siteId || !name) return;
-
-    let targetSiteId = siteId;
-
-    // If target site is auto-generated for a project without existing sites
-    if (siteId.startsWith('auto-site-')) {
-      const projId = siteId.replace('auto-site-', '');
-      const selectedSite = sites.find(s => s.id === siteId);
-      try {
-        const siteRes = await fetch(`${apiBaseUrl}/sites`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            projectId: projId,
-            name: selectedSite ? selectedSite.name : 'Main Construction Site',
-            address: 'Primary Site Location'
-          })
-        });
-        if (siteRes.ok) {
-          const createdSite = await siteRes.json();
-          targetSiteId = createdSite.id;
-          setSites(sites.map(s => s.id === siteId ? createdSite : s));
-        }
-      } catch (e) {
-        console.warn('Offline site creation fallback');
-      }
+    const effectiveSiteId = siteId || selectedSiteId || (sites.length > 0 ? sites[0].id : '');
+    
+    if (!name.trim()) {
+      alert('Please enter a task headline.');
+      return;
+    }
+    if (!effectiveSiteId) {
+      alert('Please select or create a construction site first.');
+      return;
     }
 
-    const payload = { siteId: targetSiteId, name, description, assignedTo, priority, deadline, stage: 'todo', status: 'todo' };
+    const payload = {
+      siteId: effectiveSiteId,
+      name: name.trim(),
+      description: description.trim(),
+      assignedTo: assignedTo || null,
+      priority: priority || 'medium',
+      deadline: deadline || null,
+      stage: 'todo',
+      status: 'todo'
+    };
 
     // 1. Save directly to local storage
     localTasks.create(payload);
-    setTasks(localTasks.list(selectedSiteId));
+    setSelectedSiteId(effectiveSiteId);
+    setTasks(localTasks.list(effectiveSiteId));
     resetForm();
 
     // 2. Sync with API in background
     try {
-      await fetch(`${apiBaseUrl}/tasks`, {
+      const res = await fetch(`${apiBaseUrl}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -141,8 +153,11 @@ const Tasks = () => {
         },
         body: JSON.stringify(payload)
       });
+      if (res.ok) {
+        fetchTasks(effectiveSiteId);
+      }
     } catch (err) {
-      // Offline mode
+      console.warn('Task background sync note:', err);
     }
   };
 
@@ -163,7 +178,7 @@ const Tasks = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status: nextStatus })
+        body: JSON.stringify({ status: nextStatus, stage: nextStatus })
       });
     } catch (err) {
       // Offline mode
@@ -196,30 +211,42 @@ const Tasks = () => {
 
   return (
     <div className="main-view">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 className="header-title" style={{ fontSize: '2rem' }}>Task Board</h1>
           <p style={{ color: 'var(--text-muted)' }}>Organize daily operations and manage workforce checklists</p>
         </div>
         
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Site Selector dropdown */}
           <select 
             className="form-select"
             style={{ width: 'auto', minWidth: 200 }}
             value={selectedSiteId}
-            onChange={(e) => setSelectedSiteId(e.target.value)}
+            onChange={(e) => {
+              setSelectedSiteId(e.target.value);
+              setSiteId(e.target.value);
+            }}
           >
-            {sites.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
+            {sites.length === 0 ? (
+              <option value="">No Sites Available</option>
+            ) : (
+              sites.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))
+            )}
           </select>
 
           {canManage && (
             <button 
-              onClick={() => setShowAddForm(!showAddForm)} 
+              onClick={() => {
+                if (!siteId && (selectedSiteId || sites.length > 0)) {
+                  setSiteId(selectedSiteId || sites[0].id);
+                }
+                setShowAddForm(!showAddForm);
+              }} 
               className="btn btn-primary"
-              style={{ display: 'flex', gap: 6 }}
+              style={{ display: 'flex', gap: 6, alignItems: 'center' }}
             >
               <Plus size={16} />
               <span>{showAddForm ? 'Board View' : 'Add Task'}</span>
@@ -228,7 +255,18 @@ const Tasks = () => {
         </div>
       </div>
 
-      {showAddForm ? (
+      {sites.length === 0 && !showAddForm ? (
+        <div className="card" style={{ textAlign: 'center', padding: '48px 24px', maxWidth: 520, margin: '40px auto', borderRadius: 16 }}>
+          <Building size={48} style={{ color: 'var(--primary-color)', margin: '0 auto 16px', opacity: 0.8 }} />
+          <h3 style={{ fontSize: '1.25rem', marginBottom: 8, color: 'var(--text-main)' }}>No Construction Sites Available</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: 20, lineHeight: 1.5 }}>
+            Tasks are allocated to specific project sites. Create a project and site to start deploying workforce checklists.
+          </p>
+          <a href="/projects" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+            Go to Projects
+          </a>
+        </div>
+      ) : showAddForm ? (
         <div className="card" style={{ maxWidth: 600, margin: '0 auto', width: '100%' }}>
           <h2 className="card-title"><CheckSquare size={18} /> Allocate New Site Task</h2>
           <form onSubmit={handleCreate}>
@@ -236,13 +274,17 @@ const Tasks = () => {
               <label className="form-label">Select Target Site</label>
               <select 
                 className="form-select"
-                value={siteId}
+                value={siteId || selectedSiteId || (sites.length > 0 ? sites[0].id : '')}
                 onChange={(e) => setSiteId(e.target.value)}
                 required
               >
-                {sites.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
+                {sites.length === 0 ? (
+                  <option value="">No Sites Found — Create a Site first</option>
+                ) : (
+                  sites.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -317,7 +359,7 @@ const Tasks = () => {
       ) : (
         <div className="kanban-board">
           {columns.map((col) => {
-            const colTasks = tasks.filter(t => t.status === col.key);
+            const colTasks = tasks.filter(t => (t.status === col.key || t.stage === col.key));
             return (
               <div key={col.key} className="kanban-column">
                 <div className="kanban-column-header">
@@ -356,9 +398,9 @@ const Tasks = () => {
                             <span>{task.deadline || 'No Date'}</span>
                           </div>
 
-                          {task.status !== 'done' && (
+                          {(task.status !== 'done' && task.stage !== 'done') && (
                             <button 
-                              onClick={() => handleUpdateStatus(task.id, task.status)}
+                              onClick={() => handleUpdateStatus(task.id, task.status || task.stage)}
                               className="btn btn-secondary" 
                               style={{ padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center' }}
                               title="Advance Status"

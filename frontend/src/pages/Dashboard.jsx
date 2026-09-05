@@ -26,18 +26,20 @@ const Dashboard = () => {
 
     // 2. If API backend is available, sync with API
     try {
+      setLoading(true);
       const res = await fetch(`${apiBaseUrl}/monitoring/stats`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        // If API returns active data, prioritize it
-        if (data && (data.totalProjects > 0 || data.projectComparison?.length > 0)) {
+        if (data && typeof data.totalProjects !== 'undefined') {
           setStats(data);
         }
       }
     } catch (err) {
-      // On Vercel / offline mode, localData is already active and accurate
+      // On offline mode / fallback, localData is active
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,7 +95,7 @@ const Dashboard = () => {
 
   return (
     <div className="main-view">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 className="header-title" style={{ fontSize: '2rem' }}>Construction Dashboard</h1>
           <p style={{ color: 'var(--text-muted)' }}>Real-time analytics, cost trends, and site operations</p>
@@ -137,7 +139,7 @@ const Dashboard = () => {
         </div>
 
         <div className="card stat-card">
-          <div className="stat-icon" style={{ color: 'var(--secondary-color)', background: 'rgba(236,72,153,0.1)' }}>
+          <div className="stat-icon" style={{ color: 'var(--secondary-color)', background: 'rgba(236,72,153,0.12)' }}>
             <IndianRupee size={24} />
           </div>
           <div className="stat-info">
@@ -169,7 +171,7 @@ const Dashboard = () => {
               <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
                 <defs>
                   <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--primary-color)" stopOpacity="0.4" />
+                    <stop offset="0%" stopColor="var(--primary-color)" stopOpacity="0.35" />
                     <stop offset="100%" stopColor="var(--primary-color)" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
@@ -179,7 +181,7 @@ const Dashboard = () => {
                   const y = svgHeight - padding - ((val / maxVal) * (svgHeight - padding * 2));
                   return (
                     <g key={idx}>
-                      <line x1={padding} y1={y} x2={svgWidth - padding} y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
+                      <line x1={padding} y1={y} x2={svgWidth - padding} y2={y} stroke="var(--grid-line)" strokeDasharray="4 4" />
                       <text x={padding - 8} y={y + 3} fill="var(--text-dim)" fontSize="10" textAnchor="end">₹{val}L</text>
                     </g>
                   );
@@ -198,7 +200,7 @@ const Dashboard = () => {
                       cx={pt.x} 
                       cy={pt.y} 
                       r={activeHoverPoint === idx ? "7" : "5"} 
-                      fill="var(--bg-card)" 
+                      fill="var(--bg-card-solid)" 
                       stroke="var(--primary-color)" 
                       strokeWidth="3"
                       style={{ cursor: 'pointer', transition: 'all 0.2s' }}
@@ -210,8 +212,8 @@ const Dashboard = () => {
                     {/* Tooltip on Hover */}
                     {activeHoverPoint === idx && (
                       <g>
-                        <rect x={pt.x - 40} y={pt.y - 35} width="80" height="24" rx="6" fill="#1e1b4b" stroke="var(--primary-color)" strokeWidth="1" />
-                        <text x={pt.x} y={pt.y - 19} fill="#ffffff" fontSize="11" fontWeight="bold" textAnchor="middle">₹{pt.spent.toFixed(2)}L</text>
+                        <rect x={pt.x - 40} y={pt.y - 35} width="80" height="24" rx="6" fill="var(--tooltip-bg)" stroke="var(--primary-color)" strokeWidth="1" />
+                        <text x={pt.x} y={pt.y - 19} fill="var(--tooltip-text)" fontSize="11" fontWeight="bold" textAnchor="middle">₹{pt.spent.toFixed(2)}L</text>
                       </g>
                     )}
                   </g>
@@ -244,14 +246,14 @@ const Dashboard = () => {
                 return (
                   <div key={p.id || idx} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span style={{ fontWeight: 600 }}>{p.name}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</span>
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.775rem' }}>
                         ₹{spent.toFixed(2)}L / <strong style={{ color: 'var(--text-primary)' }}>₹{allocated.toFixed(2)}L</strong>
                       </span>
                     </div>
 
                     {/* Dual Stacked Progress Bar */}
-                    <div style={{ width: '100%', height: 10, background: 'rgba(255,255,255,0.05)', borderRadius: 5, overflow: 'hidden', position: 'relative' }}>
+                    <div style={{ width: '100%', height: 10, background: 'var(--bg-subtle)', borderRadius: 5, overflow: 'hidden', position: 'relative' }}>
                       <div style={{
                         width: `${spentPercent}%`,
                         height: '100%',
@@ -288,14 +290,14 @@ const Dashboard = () => {
               {stats.siteStats.map((site) => (
                 <div key={site.siteId} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{site.name}</span>
+                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{site.name}</span>
                     <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>{site.status}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     <span>Tasks: {site.completedTasks} / {site.totalTasks} completed</span>
                     <span>{site.progressPercent}%</span>
                   </div>
-                  <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ width: '100%', height: 6, background: 'var(--bg-subtle)', borderRadius: 3, overflow: 'hidden' }}>
                     <div style={{
                       width: `${site.progressPercent}%`,
                       height: '100%',
@@ -318,42 +320,32 @@ const Dashboard = () => {
         <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
           <h2 className="card-title"><AlertCircle size={18} /> Real-Time Project Updates</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', flex: 1, marginTop: 12 }}>
-            <div style={{ padding: 12, background: 'rgba(255,255,255,0.02)', borderLeft: '3px solid var(--accent-color)', borderRadius: '0 8px 8px 0' }}>
+            <div style={{ padding: 12, background: 'var(--bg-subtle)', borderLeft: '3px solid var(--accent-color)', borderRadius: '0 8px 8px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: 4 }}>
                 <span>Sarah Engineer</span>
                 <span>Just Now</span>
               </div>
-              <p style={{ fontSize: '0.85rem' }}>Soil compaction testing at Apex Site A passed. Concrete base pour is cleared to start.</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Soil compaction testing at Apex Site A passed. Concrete base pour is cleared to start.</p>
             </div>
 
-            <div style={{ padding: 12, background: 'rgba(255,255,255,0.02)', borderLeft: '3px solid var(--primary-color)', borderRadius: '0 8px 8px 0' }}>
+            <div style={{ padding: 12, background: 'var(--bg-subtle)', borderLeft: '3px solid var(--primary-color)', borderRadius: '0 8px 8px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: 4 }}>
                 <span>System Logger</span>
                 <span>2 hours ago</span>
               </div>
-              <p style={{ fontSize: '0.85rem' }}>Brick estimation for project generated and saved to project vault.</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Brick estimation for project generated and saved to project vault.</p>
             </div>
 
-            <div style={{ padding: 12, background: 'rgba(255,255,255,0.02)', borderLeft: '3px solid var(--color-success)', borderRadius: '0 8px 8px 0' }}>
+            <div style={{ padding: 12, background: 'var(--bg-subtle)', borderLeft: '3px solid var(--color-success)', borderRadius: '0 8px 8px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: 4 }}>
                 <span>Mark Contractor</span>
                 <span>Yesterday</span>
               </div>
-              <p style={{ fontSize: '0.85rem' }}>Safety gates and boundaries are completely installed at residential site.</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Tower Crane #2 safety check certified by chief inspector.</p>
             </div>
           </div>
         </div>
       </div>
-      
-      {/* Inject custom spin animation keyframes */}
-      <style>{`
-        .spin-anim {
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };

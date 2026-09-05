@@ -1,7 +1,9 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import Navigation from './components/Navigation';
+import ThemeToggle from './components/ThemeToggle';
 
 // Pages
 import Login from './pages/Login';
@@ -49,14 +51,27 @@ const AppLayout = ({ children }) => {
       <div className="app-content">
         <header className="header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', padding: '4px 10px', borderRadius: 12 }}>
-              Secure Network Status: Online
+            <span style={{ 
+              fontSize: '0.85rem', 
+              color: 'var(--text-muted)', 
+              background: 'var(--bg-subtle)', 
+              border: '1px solid var(--border-color)', 
+              padding: '4px 10px', 
+              borderRadius: 12,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6
+            }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-success)', display: 'inline-block' }}></span>
+              Secure Network: Online
             </span>
           </div>
+          
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
               Logged in as: <strong style={{ color: 'var(--text-primary)' }}>{user?.fullName}</strong>
             </span>
+            <ThemeToggle variant="icon" />
           </div>
         </header>
         {children}
@@ -67,83 +82,85 @@ const AppLayout = ({ children }) => {
 
 const App = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Authentication Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Authentication Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          {/* Secure Internal Portal Routes */}
-          <Route path="/" element={
-            <PrivateRoute>
-              <AppLayout>
-                <Dashboard />
-              </AppLayout>
-            </PrivateRoute>
-          } />
-          
-          <Route path="/projects" element={
-            <PrivateRoute>
-              <AppLayout>
-                <Projects />
-              </AppLayout>
-            </PrivateRoute>
-          } />
+            {/* Secure Internal Portal Routes */}
+            <Route path="/" element={
+              <PrivateRoute>
+                <AppLayout>
+                  <Dashboard />
+                </AppLayout>
+              </PrivateRoute>
+            } />
+            
+            <Route path="/projects" element={
+              <PrivateRoute>
+                <AppLayout>
+                  <Projects />
+                </AppLayout>
+              </PrivateRoute>
+            } />
 
-          <Route path="/sites" element={
-            <PrivateRoute>
-              <AppLayout>
-                <Sites />
-              </AppLayout>
-            </PrivateRoute>
-          } />
+            <Route path="/sites" element={
+              <PrivateRoute>
+                <AppLayout>
+                  <Sites />
+                </AppLayout>
+              </PrivateRoute>
+            } />
 
-          <Route path="/tasks" element={
-            <PrivateRoute>
-              <AppLayout>
-                <Tasks />
-              </AppLayout>
-            </PrivateRoute>
-          } />
+            <Route path="/tasks" element={
+              <PrivateRoute>
+                <AppLayout>
+                  <Tasks />
+                </AppLayout>
+              </PrivateRoute>
+            } />
 
-          <Route path="/calculators" element={
-            <PrivateRoute>
-              <AppLayout>
-                <Calculators />
-              </AppLayout>
-            </PrivateRoute>
-          } />
+            <Route path="/calculators" element={
+              <PrivateRoute>
+                <AppLayout>
+                  <Calculators />
+                </AppLayout>
+              </PrivateRoute>
+            } />
 
-          <Route path="/documents" element={
-            <PrivateRoute>
-              <AppLayout>
-                <Documents />
-              </AppLayout>
-            </PrivateRoute>
-          } />
+            <Route path="/documents" element={
+              <PrivateRoute>
+                <AppLayout>
+                  <Documents />
+                </AppLayout>
+              </PrivateRoute>
+            } />
 
-          <Route path="/chat" element={
-            <PrivateRoute>
-              <AppLayout>
-                <TeamChat />
-              </AppLayout>
-            </PrivateRoute>
-          } />
+            <Route path="/chat" element={
+              <PrivateRoute>
+                <AppLayout>
+                  <TeamChat />
+                </AppLayout>
+              </PrivateRoute>
+            } />
 
-          <Route path="/profile" element={
-            <PrivateRoute>
-              <AppLayout>
-                <UserProfile />
-              </AppLayout>
-            </PrivateRoute>
-          } />
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <AppLayout>
+                  <UserProfile />
+                </AppLayout>
+              </PrivateRoute>
+            } />
 
-          {/* Fallback Redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            {/* Fallback Redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 

@@ -78,7 +78,7 @@ const Documents = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data?.length > 0) setProjects(data);
+        if (Array.isArray(data)) setProjects(data);
       }
     } catch (err) {
       // Offline mode
@@ -96,7 +96,7 @@ const Documents = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data?.length > 0) setDocuments(data);
+        if (Array.isArray(data)) setDocuments(data);
       }
     } catch (err) {
       // Offline mode

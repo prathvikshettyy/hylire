@@ -41,251 +41,134 @@
       "createdAt": "2026-08-20T13:55:37.455Z"
     },
     {
-      "id": "u-1787245735845",
+      "id": "u-1788355886002",
       "email": "prathvik.a.shetty1@gmail.com",
-      "password": "Shetty@2007",
-      "fullName": "Prathvik A  Shetty",
+      "password": "shetty@2007",
+      "fullName": "Prathvik A Shetty",
       "role": "builder",
-      "createdAt": "2026-08-20T17:08:55.845Z"
+      "createdAt": "2026-09-02T13:31:26.002Z"
     }
   ],
   "projects": [
     {
-      "id": "p-1787234233561",
+      "id": "p-1788354869086",
       "name": "nitte",
-      "description": "",
+      "description": "ytuyio",
       "clientId": null,
-      "budget": 2000000,
-      "startDate": "",
-      "endDate": "",
+      "budget": 20000000,
+      "startDate": "2026-08-07",
+      "endDate": "2027-08-06",
       "status": "planning",
-      "createdAt": "2026-08-20T13:57:13.561Z"
-    },
-    {
-      "id": "p-1787248849966",
-      "name": "dsvv",
-      "description": "",
-      "clientId": null,
-      "budget": 300000000,
-      "startDate": "",
-      "endDate": "",
-      "status": "planning",
-      "createdAt": "2026-08-20T18:00:49.966Z"
+      "createdAt": "2026-09-02T13:14:29.086Z"
     }
   ],
   "sites": [
     {
-      "id": "s-1787234233564",
-      "projectId": "p-1787234233561",
+      "id": "s-1788354869089",
+      "projectId": "p-1788354869086",
       "name": "nitte - Main Site",
       "address": "Primary Project Site",
       "status": "active",
-      "createdAt": "2026-08-20T13:57:13.564Z"
-    },
-    {
-      "id": "s-1787248849969",
-      "projectId": "p-1787248849966",
-      "name": "dsvv - Main Site",
-      "address": "Primary Project Site",
-      "status": "active",
-      "createdAt": "2026-08-20T18:00:49.969Z"
+      "createdAt": "2026-09-02T13:14:29.089Z",
+      "updatedAt": "2026-09-02T17:00:55.442Z"
     }
   ],
   "tasks": [
     {
-      "id": "t-1787248732082",
-      "siteId": "s-1787234233564",
-      "name": "vdf",
-      "description": "",
+      "id": "t-1788355206485",
+      "siteId": "s-1788354869089",
+      "name": "dfjgk",
+      "description": "fhgjhkk",
       "assignedTo": "u-4",
       "status": "done",
-      "priority": "medium",
-      "deadline": null,
-      "createdAt": "2026-08-20T17:58:52.082Z",
-      "updatedAt": "2026-08-20T17:58:57.368Z"
+      "priority": "high",
+      "deadline": "2026-06-10",
+      "createdAt": "2026-09-02T13:20:06.485Z",
+      "stage": "done",
+      "updatedAt": "2026-09-02T13:40:54.038Z"
     }
   ],
   "materials": [
     {
-      "id": "m-1787247535614-113",
-      "projectId": "p-1787234233561",
-      "name": "Cement (OPC/PPC 50kg)",
+      "id": "m-1788356416123-643",
+      "projectId": "p-1788354869075",
+      "name": "Cement (Grade M20 OPC/PPC 50kg)",
       "quantity": 112,
       "unit": "bags",
       "unitCost": 380,
       "totalCost": 42560,
-      "createdAt": "2026-08-20T17:38:55.615Z"
+      "createdAt": "2026-09-02T13:40:16.123Z"
     },
     {
-      "id": "m-1787247535617-118",
-      "projectId": "p-1787234233561",
+      "id": "m-1788356416128-655",
+      "projectId": "p-1788354869075",
       "name": "River Sand / M-Sand",
       "quantity": 210,
       "unit": "cu ft",
       "unitCost": 45,
       "totalCost": 9450,
-      "createdAt": "2026-08-20T17:38:55.617Z"
+      "createdAt": "2026-09-02T13:40:16.128Z"
     },
     {
-      "id": "m-1787247535625-93",
-      "projectId": "p-1787234233561",
-      "name": "Coarse Aggregate (20mm)",
+      "id": "m-1788356416132-894",
+      "projectId": "p-1788354869075",
+      "name": "Coarse Aggregate (20mm Crushed Metal)",
       "quantity": 420,
       "unit": "cu ft",
       "unitCost": 55,
       "totalCost": 23100,
-      "createdAt": "2026-08-20T17:38:55.625Z"
+      "createdAt": "2026-09-02T13:40:16.132Z"
     },
     {
-      "id": "m-1787247535627-764",
-      "projectId": "p-1787234233561",
-      "name": "TMT Steel Rebar (Fe500D)",
-      "quantity": 1668,
+      "id": "m-1788356416135-924",
+      "projectId": "p-1788354869075",
+      "name": "TMT Steel Rebar Fe500D (1.2%)",
+      "quantity": 1334,
       "unit": "kg",
       "unitCost": 65,
-      "totalCost": 108420,
-      "createdAt": "2026-08-20T17:38:55.627Z"
-    },
-    {
-      "id": "m-1787324723205-770",
-      "projectId": "p-101",
-      "name": "Cement (OPC/PPC 50kg)",
-      "quantity": 112,
-      "unit": "bags",
-      "unitCost": 380,
-      "totalCost": 42560,
-      "createdAt": "2026-08-21T15:05:23.205Z"
-    },
-    {
-      "id": "m-1787324723206-480",
-      "projectId": "p-101",
-      "name": "River Sand / M-Sand",
-      "quantity": 210,
-      "unit": "cu ft",
-      "unitCost": 45,
-      "totalCost": 9450,
-      "createdAt": "2026-08-21T15:05:23.206Z"
-    },
-    {
-      "id": "m-1787324723208-496",
-      "projectId": "p-101",
-      "name": "Coarse Aggregate (20mm)",
-      "quantity": 420,
-      "unit": "cu ft",
-      "unitCost": 55,
-      "totalCost": 23100,
-      "createdAt": "2026-08-21T15:05:23.208Z"
-    },
-    {
-      "id": "m-1787324723211-572",
-      "projectId": "p-101",
-      "name": "TMT Steel Rebar (Fe500D)",
-      "quantity": 1668,
-      "unit": "kg",
-      "unitCost": 65,
-      "totalCost": 108420,
-      "createdAt": "2026-08-21T15:05:23.211Z"
+      "totalCost": 86710,
+      "createdAt": "2026-09-02T13:40:16.135Z"
     }
   ],
   "brickEstimations": [
     {
-      "id": "be-1787247459984",
-      "projectId": "p-1787234233561",
+      "id": "be-1788356395058",
+      "projectId": "p-1788354869075",
       "siteId": null,
       "length": 50,
       "width": 9,
       "height": 10,
       "thickness": 9,
-      "bricksNeeded": 4288,
-      "cementBags": 16,
-      "sandCuFt": 116,
-      "totalCost": 47748,
-      "createdAt": "2026-08-20T17:37:39.986Z"
-    },
-    {
-      "id": "be-1787247507622",
-      "projectId": "p-1787234233561",
-      "siteId": null,
-      "length": 50,
-      "width": 9,
-      "height": 10,
-      "thickness": 9,
-      "bricksNeeded": 3898,
-      "cementBags": 16,
-      "sandCuFt": 116,
-      "totalCost": 44433,
-      "createdAt": "2026-08-20T17:38:27.622Z"
-    },
-    {
-      "id": "be-1787247508862",
-      "projectId": "p-1787234233561",
-      "siteId": null,
-      "length": 50,
-      "width": 9,
-      "height": 10,
-      "thickness": 9,
-      "bricksNeeded": 3898,
-      "cementBags": 16,
-      "sandCuFt": 116,
-      "totalCost": 44433,
-      "createdAt": "2026-08-20T17:38:28.862Z"
-    },
-    {
-      "id": "be-1787323436133",
-      "projectId": "p-1787234233561",
-      "siteId": null,
-      "length": 50,
-      "width": 9,
-      "height": 10,
-      "thickness": 9,
-      "bricksNeeded": 4288,
-      "cementBags": 16,
-      "sandCuFt": 116,
-      "totalCost": 47748,
-      "createdAt": "2026-08-21T14:43:56.133Z"
-    },
-    {
-      "id": "be-1787323485937",
-      "projectId": "p-1787234233561",
-      "siteId": null,
-      "length": 50,
-      "width": 9,
-      "height": 10,
-      "thickness": 9,
-      "bricksNeeded": 3158,
-      "cementBags": 16,
-      "sandCuFt": 116,
-      "totalCost": 38143,
-      "createdAt": "2026-08-21T14:44:45.937Z"
-    },
-    {
-      "id": "be-1787323501671",
-      "projectId": "p-1787234233561",
-      "siteId": null,
-      "length": 50,
-      "width": 9,
-      "height": 10,
-      "thickness": 9,
-      "bricksNeeded": -5145,
-      "cementBags": 16,
-      "sandCuFt": 116,
-      "totalCost": -32432.5,
-      "createdAt": "2026-08-21T14:45:01.671Z"
+      "bricksNeeded": 3491,
+      "cementBags": 13,
+      "sandCuFt": 94,
+      "totalCost": 38843.5,
+      "createdAt": "2026-09-02T13:39:55.058Z"
     }
   ],
   "costEstimations": [],
   "documents": [
     {
-      "id": "d-1787248438881",
-      "projectId": "p-1787234233561",
-      "name": "Hylire documentation (1).docx (3).pdf",
-      "fileUrl": "http://localhost:5000/uploads/documents/1787248438877_Hylire_documentation__1_.docx__3_.pdf",
-      "fileType": "application/pdf",
-      "fileSize": "409.72 KB",
+      "id": "d-1788355237940",
+      "projectId": "p-1788354869075",
+      "name": "Fee Structure.jpeg",
+      "fileUrl": "http://localhost:5000/uploads/documents/1788355237938_Fee_Structure.jpeg",
+      "fileType": "image/jpeg",
+      "fileSize": "121.19 KB",
       "category": "Blueprints",
-      "uploadedBy": "Prathvik A  Shetty",
-      "createdAt": "2026-08-20T17:53:58.881Z"
+      "uploadedBy": "John Builder",
+      "createdAt": "2026-09-02T13:20:37.940Z"
     }
   ],
-  "chatMessages": []
+  "chatMessages": [
+    {
+      "id": "msg-1788355245584",
+      "projectId": "p-1788354869086",
+      "senderId": "u-1",
+      "senderName": "John Builder",
+      "messageText": "fdkgjlsk;l",
+      "fileUrl": null,
+      "createdAt": "2026-09-02T13:20:45.584Z"
+    }
+  ]
 }

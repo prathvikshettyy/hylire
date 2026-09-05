@@ -31,7 +31,7 @@ const Projects = () => {
       });
       if (projRes.ok) {
         const data = await projRes.json();
-        if (data && data.length > 0) {
+        if (Array.isArray(data)) {
           setProjects(data);
         }
       }

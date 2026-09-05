@@ -11,101 +11,10 @@ const DEFAULT_INITIAL_STATE = {
     { id: "u-4", email: "contractor@hylire.com", fullName: "Mark Contractor", role: "contractor" },
     { id: "u-5", email: "worker@hylire.com", fullName: "David Worker", role: "worker" }
   ],
-  projects: [
-    {
-      id: "p-101",
-      name: "Apex Sky Tower",
-      description: "42-storey mixed-use commercial & luxury residential development.",
-      budget: 85000000,
-      startDate: "2026-01-15",
-      endDate: "2027-12-30",
-      clientId: "u-3",
-      status: "in-progress",
-      createdAt: new Date(Date.now() - 30 * 86400000).toISOString()
-    },
-    {
-      id: "p-102",
-      name: "Greenfield Tech Park",
-      description: "State of the art sustainable IT campus with LEED Platinum compliance.",
-      budget: 120000000,
-      startDate: "2026-03-01",
-      endDate: "2028-06-15",
-      clientId: "u-3",
-      status: "planning",
-      createdAt: new Date(Date.now() - 15 * 86400000).toISOString()
-    }
-  ],
-  sites: [
-    {
-      id: "s-101",
-      projectId: "p-101",
-      name: "Apex Tower - North Wing Foundation",
-      address: "Plot 14, Financial District, Cyber City",
-      engineerId: "u-2",
-      status: "active",
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: "s-102",
-      projectId: "p-102",
-      name: "Greenfield - Main Campus Block A",
-      address: "Outer Ring Road Sector 9",
-      engineerId: "u-2",
-      status: "active",
-      createdAt: new Date().toISOString()
-    }
-  ],
-  tasks: [
-    {
-      id: "t-101",
-      siteId: "s-101",
-      name: "Raft Foundation Concrete Pour (M25)",
-      description: "Pour 240 m3 of grade M25 concrete with vibration control.",
-      stage: "completed",
-      assignedTo: "u-2",
-      workerName: "Ramesh & Team",
-      priority: "high",
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: "t-102",
-      siteId: "s-101",
-      name: "Reinforcement Steel Tying (Columns C1-C12)",
-      description: "Inspect TMT rebar bending and bar placement compliance.",
-      stage: "in-progress",
-      assignedTo: "u-4",
-      workerName: "Steel Fixers Team 1",
-      priority: "high",
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: "t-103",
-      siteId: "s-101",
-      name: "External Brickwork 9-inch Walls",
-      description: "First floor outer periphery masonry with 1:6 cement mortar.",
-      stage: "todo",
-      assignedTo: "u-4",
-      workerName: "Masonry Crew B",
-      priority: "medium",
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: "t-104",
-      siteId: "s-102",
-      name: "Soil Compaction & Excavation Leveling",
-      description: "Trench excavation for storm drainage and basement footings.",
-      stage: "review",
-      assignedTo: "u-2",
-      workerName: "Excavation Team",
-      priority: "medium",
-      createdAt: new Date().toISOString()
-    }
-  ],
-  materials: [
-    { id: "m-1", projectId: "p-101", name: "Ultratech Cement (50kg)", quantity: 450, unit: "Bags", unitPrice: 380, totalCost: 171000 },
-    { id: "m-2", projectId: "p-101", name: "Fe500D TMT Steel Rebar", quantity: 8200, unit: "Kg", unitPrice: 65, totalCost: 533000 },
-    { id: "m-3", projectId: "p-101", name: "River / Manufactured Sand", quantity: 1200, unit: "Cu Ft", unitPrice: 48, totalCost: 57600 }
-  ],
+  projects: [],
+  sites: [],
+  tasks: [],
+  materials: [],
   brickEstimations: [],
   costEstimations: [],
   documents: [],
@@ -123,15 +32,15 @@ export const getLocalStore = () => {
     const parsed = JSON.parse(raw);
     // Ensure all required collections exist
     return {
-      users: parsed.users || DEFAULT_INITIAL_STATE.users,
-      projects: parsed.projects || DEFAULT_INITIAL_STATE.projects,
-      sites: parsed.sites || DEFAULT_INITIAL_STATE.sites,
-      tasks: parsed.tasks || DEFAULT_INITIAL_STATE.tasks,
-      materials: parsed.materials || DEFAULT_INITIAL_STATE.materials,
-      brickEstimations: parsed.brickEstimations || [],
-      costEstimations: parsed.costEstimations || [],
-      documents: parsed.documents || [],
-      chatMessages: parsed.chatMessages || []
+      users: Array.isArray(parsed.users) && parsed.users.length > 0 ? parsed.users : DEFAULT_INITIAL_STATE.users,
+      projects: Array.isArray(parsed.projects) ? parsed.projects : [],
+      sites: Array.isArray(parsed.sites) ? parsed.sites : [],
+      tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+      materials: Array.isArray(parsed.materials) ? parsed.materials : [],
+      brickEstimations: Array.isArray(parsed.brickEstimations) ? parsed.brickEstimations : [],
+      costEstimations: Array.isArray(parsed.costEstimations) ? parsed.costEstimations : [],
+      documents: Array.isArray(parsed.documents) ? parsed.documents : [],
+      chatMessages: Array.isArray(parsed.chatMessages) ? parsed.chatMessages : []
     };
   } catch (err) {
     console.error('Error reading localStorage store:', err);
@@ -236,20 +145,29 @@ export const localSites = {
 export const localTasks = {
   list(siteId) {
     const store = getLocalStore();
-    if (siteId) return store.tasks.filter(t => t.siteId === siteId);
-    return store.tasks;
+    const tasks = store.tasks || [];
+    const normalized = tasks.map(t => ({
+      ...t,
+      status: t.status || t.stage || 'todo',
+      stage: t.stage || t.status || 'todo'
+    }));
+    if (siteId) return normalized.filter(t => t.siteId === siteId);
+    return normalized;
   },
   create(task) {
     const store = getLocalStore();
+    const st = task.status || task.stage || 'todo';
     const newTask = {
       id: task.id || `t-${Date.now()}`,
       siteId: task.siteId,
       name: task.name,
       description: task.description || '',
-      stage: task.stage || 'todo',
+      stage: st,
+      status: st,
       assignedTo: task.assignedTo || null,
       workerName: task.workerName || '',
       priority: task.priority || 'medium',
+      deadline: task.deadline || null,
       createdAt: new Date().toISOString()
     };
     store.tasks.push(newTask);
@@ -258,7 +176,7 @@ export const localTasks = {
   },
   updateStage(id, stage) {
     const store = getLocalStore();
-    store.tasks = store.tasks.map(t => t.id === id ? { ...t, stage } : t);
+    store.tasks = store.tasks.map(t => t.id === id ? { ...t, stage, status: stage, updatedAt: new Date().toISOString() } : t);
     saveLocalStore(store);
     return true;
   },
@@ -409,11 +327,15 @@ export const computeDashboardStats = () => {
 
   // Monthly expenditure curve simulation based on project budgets
   const months = ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'];
-  const baseFactor = totalBudget > 0 ? (totalBudget / 100000) / 24 : 8.5;
-  const monthlyExpenditure = months.map((m, idx) => ({
-    month: m,
-    spent: parseFloat((baseFactor * (0.6 + idx * 0.28 + (idx % 2 === 0 ? 0.15 : -0.1))).toFixed(2))
-  }));
+  const monthlyExpenditure = totalBudget > 0
+    ? months.map((m, idx) => {
+        const baseFactor = (totalBudget / 100000) / 24;
+        return {
+          month: m,
+          spent: parseFloat((baseFactor * (0.6 + idx * 0.28 + (idx % 2 === 0 ? 0.15 : -0.1))).toFixed(2))
+        };
+      })
+    : [];
 
   const siteStats = sites.map(s => {
     const siteTasks = tasks.filter(t => t.siteId === s.id);

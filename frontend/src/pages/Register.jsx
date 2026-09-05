@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from '../components/ThemeToggle';
 
 const Register = () => {
   const [email, setEmail] = useState('');
@@ -39,6 +40,18 @@ const Register = () => {
 
   return (
     <div className="auth-wrapper">
+      {/* Dynamic Ambient Background orbs */}
+      <div className="bg-glow-container">
+        <div className="bg-orb orb-1"></div>
+        <div className="bg-orb orb-2"></div>
+      </div>
+
+      {/* Floating Theme Selector */}
+      <div className="auth-theme-floating">
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Theme</span>
+        <ThemeToggle variant="icon" />
+      </div>
+
       <div className="auth-card">
         <div className="auth-header">
           <div className="logo-icon" style={{ margin: '0 auto', width: 48, height: 48 }}>
@@ -60,7 +73,7 @@ const Register = () => {
             borderRadius: '10px',
             fontSize: '0.85rem',
             marginBottom: '20px',
-            border: '1px solid rgba(239, 68, 68, 0.15)'
+            border: '1px solid rgba(239, 68, 68, 0.2)'
           }}>
             {error}
           </div>
@@ -74,7 +87,7 @@ const Register = () => {
             borderRadius: '10px',
             fontSize: '0.85rem',
             marginBottom: '20px',
-            border: '1px solid rgba(16, 185, 129, 0.15)'
+            border: '1px solid rgba(16, 185, 129, 0.2)'
           }}>
             {success}
           </div>

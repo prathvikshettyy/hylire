@@ -29,7 +29,7 @@ const Sites = () => {
       });
       if (projRes.ok) {
         const data = await projRes.json();
-        if (data?.length > 0) setProjects(data);
+        if (Array.isArray(data)) setProjects(data);
       }
 
       const siteRes = await fetch(`${apiBaseUrl}/sites`, {
@@ -37,7 +37,7 @@ const Sites = () => {
       });
       if (siteRes.ok) {
         const data = await siteRes.json();
-        if (data?.length > 0) setSites(data);
+        if (Array.isArray(data)) setSites(data);
       }
 
       const userRes = await fetch(`${apiBaseUrl}/auth/list`, {

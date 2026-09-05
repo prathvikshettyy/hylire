@@ -62,7 +62,6 @@ function loadStore() {
     } catch (err) {
         console.error('Error reading database file, using default store:', err.message);
     }
-    // If file doesn't exist, create it with defaultStore
     saveStore(defaultStore);
     return defaultStore;
 }
@@ -80,7 +79,9 @@ function saveStore(store) {
     }
 }
 
-const localStore = loadStore();
+function getStore() {
+    return loadStore();
+}
 
 // Generic Database Helper to support persistent disk storage or Supabase PostgreSQL
 const db = {
@@ -92,7 +93,8 @@ const db = {
                 if (error && error.code !== 'PGRST116') throw error;
                 if (data) return data;
             }
-            return localStore.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+            const store = getStore();
+            return store.users.find(u => u.email.toLowerCase() === email.toLowerCase());
         },
         async findById(id) {
             if (supabase) {
@@ -100,7 +102,8 @@ const db = {
                 if (error) throw error;
                 if (data) return data;
             }
-            return localStore.users.find(u => u.id === id);
+            const store = getStore();
+            return store.users.find(u => u.id === id);
         },
         async create(user) {
             const newUser = { id: `u-${Date.now()}`, ...user, createdAt: new Date().toISOString() };
@@ -113,8 +116,9 @@ const db = {
                 if (error) throw error;
                 newUser.id = data.id;
             }
-            localStore.users.push(newUser);
-            saveStore(localStore);
+            const store = getStore();
+            store.users.push(newUser);
+            saveStore(store);
             return newUser;
         },
         async listAll() {
@@ -123,7 +127,8 @@ const db = {
                 if (error) throw error;
                 if (data && data.length > 0) return data;
             }
-            return localStore.users;
+            const store = getStore();
+            return store.users;
         }
     },
 
@@ -137,7 +142,8 @@ const db = {
                 if (error) throw error;
                 if (data) return data;
             }
-            let res = localStore.projects;
+            const store = getStore();
+            let res = store.projects;
             if (filters.clientId) {
                 res = res.filter(p => p.clientId === filters.clientId);
             }
@@ -149,7 +155,8 @@ const db = {
                 if (error) throw error;
                 if (data) return data;
             }
-            return localStore.projects.find(p => p.id === id);
+            const store = getStore();
+            return store.projects.find(p => p.id === id);
         },
         async create(project) {
             const newProject = { 
@@ -170,8 +177,9 @@ const db = {
                 if (error) throw error;
                 newProject.id = data.id;
             }
-            localStore.projects.push(newProject);
-            saveStore(localStore);
+            const store = getStore();
+            store.projects.push(newProject);
+            saveStore(store);
             return newProject;
         },
         async update(id, updates) {
@@ -179,28 +187,30 @@ const db = {
                 const { data, error } = await supabase.from('projects').update(updates).eq('id', id).select().single();
                 if (error) throw error;
             }
-            const idx = localStore.projects.findIndex(p => p.id === id);
+            const store = getStore();
+            const idx = store.projects.findIndex(p => p.id === id);
             if (idx === -1) return null;
-            localStore.projects[idx] = { ...localStore.projects[idx], ...updates, updatedAt: new Date().toISOString() };
-            saveStore(localStore);
-            return localStore.projects[idx];
+            store.projects[idx] = { ...store.projects[idx], ...updates, updatedAt: new Date().toISOString() };
+            saveStore(store);
+            return store.projects[idx];
         },
         async delete(id) {
             if (supabase) {
                 const { error } = await supabase.from('projects').delete().eq('id', id);
                 if (error) throw error;
             }
-            const idx = localStore.projects.findIndex(p => p.id === id);
+            const store = getStore();
+            const idx = store.projects.findIndex(p => p.id === id);
             if (idx === -1) return false;
-            localStore.projects.splice(idx, 1);
+            store.projects.splice(idx, 1);
             // Cascade delete sub-sites, tasks, materials, estimations
-            localStore.sites = localStore.sites.filter(s => s.projectId !== id);
-            localStore.materials = localStore.materials.filter(m => m.projectId !== id);
-            localStore.brickEstimations = localStore.brickEstimations.filter(b => b.projectId !== id);
-            localStore.costEstimations = localStore.costEstimations.filter(c => c.projectId !== id);
-            localStore.documents = localStore.documents.filter(d => d.projectId !== id);
-            localStore.chatMessages = localStore.chatMessages.filter(msg => msg.projectId !== id);
-            saveStore(localStore);
+            store.sites = store.sites.filter(s => s.projectId !== id);
+            store.materials = store.materials.filter(m => m.projectId !== id);
+            store.brickEstimations = store.brickEstimations.filter(b => b.projectId !== id);
+            store.costEstimations = store.costEstimations.filter(c => c.projectId !== id);
+            store.documents = store.documents.filter(d => d.projectId !== id);
+            store.chatMessages = store.chatMessages.filter(msg => msg.projectId !== id);
+            saveStore(store);
             return true;
         }
     },
@@ -216,7 +226,8 @@ const db = {
                 if (error) throw error;
                 if (data) return data;
             }
-            let res = localStore.sites;
+            const store = getStore();
+            let res = store.sites;
             if (filters.projectId) res = res.filter(s => s.projectId === filters.projectId);
             if (filters.engineerId) res = res.filter(s => s.engineerId === filters.engineerId);
             return res;
@@ -234,8 +245,9 @@ const db = {
                 if (error) throw error;
                 newSite.id = data.id;
             }
-            localStore.sites.push(newSite);
-            saveStore(localStore);
+            const store = getStore();
+            store.sites.push(newSite);
+            saveStore(store);
             return newSite;
         },
         async update(id, updates) {
@@ -243,11 +255,12 @@ const db = {
                 const { data, error } = await supabase.from('sites').update(updates).eq('id', id).select().single();
                 if (error) throw error;
             }
-            const idx = localStore.sites.findIndex(s => s.id === id);
+            const store = getStore();
+            const idx = store.sites.findIndex(s => s.id === id);
             if (idx === -1) return null;
-            localStore.sites[idx] = { ...localStore.sites[idx], ...updates, updatedAt: new Date().toISOString() };
-            saveStore(localStore);
-            return localStore.sites[idx];
+            store.sites[idx] = { ...store.sites[idx], ...updates, updatedAt: new Date().toISOString() };
+            saveStore(store);
+            return store.sites[idx];
         }
     },
 
@@ -262,7 +275,8 @@ const db = {
                 if (error) throw error;
                 if (data) return data;
             }
-            let res = localStore.tasks;
+            const store = getStore();
+            let res = store.tasks;
             if (filters.siteId) res = res.filter(t => t.siteId === filters.siteId);
             if (filters.assignedTo) res = res.filter(t => t.assignedTo === filters.assignedTo);
             return res;
@@ -282,8 +296,9 @@ const db = {
                 if (error) throw error;
                 newTask.id = data.id;
             }
-            localStore.tasks.push(newTask);
-            saveStore(localStore);
+            const store = getStore();
+            store.tasks.push(newTask);
+            saveStore(store);
             return newTask;
         },
         async update(id, updates) {
@@ -291,11 +306,24 @@ const db = {
                 const { data, error } = await supabase.from('tasks').update(updates).eq('id', id).select().single();
                 if (error) throw error;
             }
-            const idx = localStore.tasks.findIndex(t => t.id === id);
+            const store = getStore();
+            const idx = store.tasks.findIndex(t => t.id === id);
             if (idx === -1) return null;
-            localStore.tasks[idx] = { ...localStore.tasks[idx], ...updates, updatedAt: new Date().toISOString() };
-            saveStore(localStore);
-            return localStore.tasks[idx];
+            store.tasks[idx] = { ...store.tasks[idx], ...updates, updatedAt: new Date().toISOString() };
+            saveStore(store);
+            return store.tasks[idx];
+        },
+        async delete(id) {
+            if (supabase) {
+                const { error } = await supabase.from('tasks').delete().eq('id', id);
+                if (error) throw error;
+            }
+            const store = getStore();
+            const idx = store.tasks.findIndex(t => t.id === id);
+            if (idx === -1) return false;
+            store.tasks.splice(idx, 1);
+            saveStore(store);
+            return true;
         }
     },
 
@@ -307,7 +335,8 @@ const db = {
                 if (error) throw error;
                 if (data) return data;
             }
-            return localStore.materials.filter(m => m.projectId === projectId);
+            const store = getStore();
+            return store.materials.filter(m => m.projectId === projectId);
         },
         async create(material) {
             const newMat = { id: `m-${Date.now()}-${Math.floor(Math.random()*1000)}`, ...material, createdAt: new Date().toISOString() };
@@ -323,8 +352,9 @@ const db = {
                 if (error) throw error;
                 newMat.id = data.id;
             }
-            localStore.materials.push(newMat);
-            saveStore(localStore);
+            const store = getStore();
+            store.materials.push(newMat);
+            saveStore(store);
             return newMat;
         },
         async delete(id) {
@@ -332,10 +362,11 @@ const db = {
                 const { error } = await supabase.from('materials').delete().eq('id', id);
                 if (error) throw error;
             }
-            const idx = localStore.materials.findIndex(m => m.id === id);
+            const store = getStore();
+            const idx = store.materials.findIndex(m => m.id === id);
             if (idx === -1) return false;
-            localStore.materials.splice(idx, 1);
-            saveStore(localStore);
+            store.materials.splice(idx, 1);
+            saveStore(store);
             return true;
         }
     },
@@ -348,7 +379,8 @@ const db = {
                 if (error) throw error;
                 if (data) return data;
             }
-            return localStore.brickEstimations.filter(be => be.projectId === projectId);
+            const store = getStore();
+            return store.brickEstimations.filter(be => be.projectId === projectId);
         },
         async create(estimation) {
             const newBe = { id: `be-${Date.now()}`, ...estimation, createdAt: new Date().toISOString() };
@@ -365,8 +397,9 @@ const db = {
                 if (error) throw error;
                 newBe.id = data.id;
             }
-            localStore.brickEstimations.push(newBe);
-            saveStore(localStore);
+            const store = getStore();
+            store.brickEstimations.push(newBe);
+            saveStore(store);
             return newBe;
         },
         async delete(id) {
@@ -374,10 +407,11 @@ const db = {
                 const { error } = await supabase.from('brick_estimations').delete().eq('id', id);
                 if (error) throw error;
             }
-            const idx = localStore.brickEstimations.findIndex(be => be.id === id);
+            const store = getStore();
+            const idx = store.brickEstimations.findIndex(be => be.id === id);
             if (idx === -1) return false;
-            localStore.brickEstimations.splice(idx, 1);
-            saveStore(localStore);
+            store.brickEstimations.splice(idx, 1);
+            saveStore(store);
             return true;
         }
     },
@@ -390,7 +424,8 @@ const db = {
                 if (error) throw error;
                 if (data) return data;
             }
-            return localStore.costEstimations.filter(ce => ce.projectId === projectId);
+            const store = getStore();
+            return store.costEstimations.filter(ce => ce.projectId === projectId);
         },
         async create(estimation) {
             const newCe = { id: `ce-${Date.now()}`, ...estimation, createdAt: new Date().toISOString() };
@@ -406,8 +441,9 @@ const db = {
                 if (error) throw error;
                 newCe.id = data.id;
             }
-            localStore.costEstimations.push(newCe);
-            saveStore(localStore);
+            const store = getStore();
+            store.costEstimations.push(newCe);
+            saveStore(store);
             return newCe;
         },
         async delete(id) {
@@ -415,10 +451,11 @@ const db = {
                 const { error } = await supabase.from('cost_estimations').delete().eq('id', id);
                 if (error) throw error;
             }
-            const idx = localStore.costEstimations.findIndex(ce => ce.id === id);
+            const store = getStore();
+            const idx = store.costEstimations.findIndex(ce => ce.id === id);
             if (idx === -1) return false;
-            localStore.costEstimations.splice(idx, 1);
-            saveStore(localStore);
+            store.costEstimations.splice(idx, 1);
+            saveStore(store);
             return true;
         }
     },
@@ -431,7 +468,8 @@ const db = {
                 if (error) throw error;
                 if (data) return data;
             }
-            return localStore.documents.filter(d => d.projectId === projectId);
+            const store = getStore();
+            return store.documents.filter(d => d.projectId === projectId);
         },
         async findById(id) {
             if (supabase) {
@@ -439,7 +477,8 @@ const db = {
                 if (error) throw error;
                 if (data) return data;
             }
-            return localStore.documents.find(d => d.id === id);
+            const store = getStore();
+            return store.documents.find(d => d.id === id);
         },
         async create(document) {
             const newDoc = { id: `d-${Date.now()}`, ...document, createdAt: new Date().toISOString() };
@@ -456,8 +495,9 @@ const db = {
                 if (error) throw error;
                 newDoc.id = data.id;
             }
-            localStore.documents.push(newDoc);
-            saveStore(localStore);
+            const store = getStore();
+            store.documents.push(newDoc);
+            saveStore(store);
             return newDoc;
         },
         async delete(id) {
@@ -465,10 +505,11 @@ const db = {
                 const { error } = await supabase.from('documents').delete().eq('id', id);
                 if (error) throw error;
             }
-            const idx = localStore.documents.findIndex(d => d.id === id);
+            const store = getStore();
+            const idx = store.documents.findIndex(d => d.id === id);
             if (idx === -1) return false;
-            localStore.documents.splice(idx, 1);
-            saveStore(localStore);
+            store.documents.splice(idx, 1);
+            saveStore(store);
             return true;
         }
     },
@@ -481,7 +522,8 @@ const db = {
                 if (error) throw error;
                 if (data) return data;
             }
-            return localStore.chatMessages.filter(msg => msg.projectId === projectId);
+            const store = getStore();
+            return store.chatMessages.filter(msg => msg.projectId === projectId);
         },
         async create(message) {
             const newMsg = { id: `msg-${Date.now()}`, ...message, createdAt: new Date().toISOString() };
@@ -495,8 +537,9 @@ const db = {
                 if (error) throw error;
                 newMsg.id = data.id;
             }
-            localStore.chatMessages.push(newMsg);
-            saveStore(localStore);
+            const store = getStore();
+            store.chatMessages.push(newMsg);
+            saveStore(store);
             return newMsg;
         }
     }

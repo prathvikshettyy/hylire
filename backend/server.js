@@ -117,14 +117,14 @@ app.get('/api/monitoring/stats', async (req, res) => {
         const allTasks = await db.tasks.list();
 
         const activeSites = allSites.filter(s => s.status === 'active').length;
-        const completedTasks = allTasks.filter(t => t.status === 'done').length;
+        const completedTasks = allTasks.filter(t => t.status === 'done' || t.status === 'completed').length;
         const totalBudget = allProjects.reduce((sum, p) => sum + (parseFloat(p.budget) || 0), 0);
 
         // Site-by-site tasks completion rates
         const siteStats = allSites.map(site => {
             const siteTasks = allTasks.filter(t => t.siteId === site.id);
             const total = siteTasks.length;
-            const completed = siteTasks.filter(t => t.status === 'done').length;
+            const completed = siteTasks.filter(t => t.status === 'done' || t.status === 'completed').length;
             return {
                 siteId: site.id,
                 name: site.name,
@@ -136,27 +136,41 @@ app.get('/api/monitoring/stats', async (req, res) => {
         });
 
         // 1. Compute dynamic projectComparison (Budget vs Spent per project)
+        let totalAllSpent = 0;
         const projectComparison = await Promise.all(allProjects.map(async (p) => {
+            const bricks = await db.brickEstimations.listByProject(p.id);
             const mats = await db.materials.listByProject(p.id);
             const costs = await db.costEstimations.listByProject(p.id);
             
+            const brickSum = bricks.reduce((s, b) => s + (parseFloat(b.totalCost || b.totalEstimatedCost) || 0), 0);
             const matSum = mats.reduce((s, m) => s + (parseFloat(m.totalCost) || 0), 0);
-            const costSum = costs.reduce((s, c) => s + (parseFloat(c.totalEstimatedCost) || 0), 0);
-            const totalSpent = matSum + costSum;
+            const costSum = costs.reduce((s, c) => s + (parseFloat(c.totalEstimatedCost || c.totalCost) || 0), 0);
+            const totalSpent = brickSum + matSum + costSum;
+            totalAllSpent += totalSpent;
             
-            const allocatedLakhs = parseFloat(((parseFloat(p.budget) || 0) / 100000).toFixed(2));
+            const rawAllocated = parseFloat(p.budget) || 0;
+            const allocatedLakhs = parseFloat((rawAllocated / 100000).toFixed(2));
             const spentLakhs = parseFloat((totalSpent / 100000).toFixed(2));
+            const remainingLakhs = Math.max(0, parseFloat((allocatedLakhs - spentLakhs).toFixed(2)));
+            const utilizationPercent = rawAllocated > 0 ? Math.min(100, Math.round((totalSpent / rawAllocated) * 100)) : 0;
 
             return {
                 id: p.id,
                 name: p.name,
                 allocated: allocatedLakhs,
                 spent: spentLakhs,
-                rawAllocated: parseFloat(p.budget) || 0,
+                remaining: remainingLakhs,
+                utilizationPercent,
+                rawAllocated,
                 rawSpent: totalSpent,
+                rawRemaining: Math.max(0, rawAllocated - totalSpent),
                 unit: 'Lakhs'
             };
         }));
+
+        const totalSpent = totalAllSpent;
+        const remainingBudget = Math.max(0, totalBudget - totalSpent);
+        const budgetUtilizationPercent = totalBudget > 0 ? Math.min(100, Math.round((totalSpent / totalBudget) * 100)) : 0;
 
         // 2. Compute dynamic monthlyExpenditure (Monthly spent trends)
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -171,8 +185,17 @@ app.get('/api/monitoring/stats', async (req, res) => {
         displayMonths.forEach(m => monthlyMap[m] = 0);
 
         for (const p of allProjects) {
+            const bricks = await db.brickEstimations.listByProject(p.id);
             const mats = await db.materials.listByProject(p.id);
             const costs = await db.costEstimations.listByProject(p.id);
+
+            bricks.forEach(b => {
+                const d = new Date(b.createdAt || Date.now());
+                const mName = monthNames[d.getMonth()];
+                if (monthlyMap[mName] !== undefined) {
+                    monthlyMap[mName] += (parseFloat(b.totalCost || b.totalEstimatedCost) || 0) / 100000;
+                }
+            });
 
             mats.forEach(m => {
                 const d = new Date(m.createdAt || Date.now());
@@ -186,7 +209,7 @@ app.get('/api/monitoring/stats', async (req, res) => {
                 const d = new Date(c.createdAt || Date.now());
                 const mName = monthNames[d.getMonth()];
                 if (monthlyMap[mName] !== undefined) {
-                    monthlyMap[mName] += (parseFloat(c.totalEstimatedCost) || 0) / 100000;
+                    monthlyMap[mName] += (parseFloat(c.totalEstimatedCost || c.totalCost) || 0) / 100000;
                 }
             });
         }
@@ -206,6 +229,9 @@ app.get('/api/monitoring/stats', async (req, res) => {
             totalTasks: allTasks.length,
             completedTasks,
             totalBudget,
+            totalSpent,
+            remainingBudget,
+            budgetUtilizationPercent,
             siteStats,
             projectComparison,
             monthlyExpenditure

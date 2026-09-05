@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from '../components/ThemeToggle';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -37,6 +38,18 @@ const Login = () => {
 
   return (
     <div className="auth-wrapper">
+      {/* Dynamic Ambient Background orbs */}
+      <div className="bg-glow-container">
+        <div className="bg-orb orb-1"></div>
+        <div className="bg-orb orb-2"></div>
+      </div>
+
+      {/* Floating Theme Selector */}
+      <div className="auth-theme-floating">
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Theme</span>
+        <ThemeToggle variant="icon" />
+      </div>
+
       <div className="auth-card">
         <div className="auth-header">
           <div className="logo-icon" style={{ margin: '0 auto', width: 48, height: 48 }}>
@@ -58,7 +71,7 @@ const Login = () => {
             borderRadius: '10px',
             fontSize: '0.85rem',
             marginBottom: '20px',
-            border: '1px solid rgba(239, 68, 68, 0.15)'
+            border: '1px solid rgba(239, 68, 68, 0.2)'
           }}>
             {error}
           </div>
@@ -106,7 +119,7 @@ const Login = () => {
         <div style={{
           marginTop: '24px',
           padding: '14px',
-          background: 'rgba(255,255,255,0.02)',
+          background: 'var(--bg-subtle)',
           border: '1px solid var(--border-color)',
           borderRadius: '10px',
           fontSize: '0.78rem',
@@ -117,35 +130,40 @@ const Login = () => {
             <button 
               type="button" 
               onClick={() => handleQuickLogin('admin@hylire.com')}
-              style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
+              className="btn-secondary"
+              style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer' }}
             >
               Admin / Builder
             </button>
             <button 
               type="button" 
               onClick={() => handleQuickLogin('engineer@hylire.com')}
-              style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
+              className="btn-secondary"
+              style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer' }}
             >
               Engineer
             </button>
             <button 
               type="button" 
               onClick={() => handleQuickLogin('client@hylire.com')}
-              style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
+              className="btn-secondary"
+              style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer' }}
             >
               Client
             </button>
             <button 
               type="button" 
               onClick={() => handleQuickLogin('contractor@hylire.com')}
-              style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
+              className="btn-secondary"
+              style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer' }}
             >
               Contractor
             </button>
             <button 
               type="button" 
               onClick={() => handleQuickLogin('worker@hylire.com')}
-              style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'var(--text-primary)', cursor: 'pointer' }}
+              className="btn-secondary"
+              style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer' }}
             >
               Worker
             </button>

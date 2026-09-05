@@ -12,6 +12,7 @@ import {
   LogOut 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from './ThemeToggle';
 
 const Navigation = () => {
   const { user, logout } = useAuth();
@@ -30,6 +31,7 @@ const Navigation = () => {
   ];
 
   const getInitials = (name) => {
+    if (!name) return 'U';
     return name
       .split(' ')
       .map(part => part[0])
@@ -49,6 +51,7 @@ const Navigation = () => {
           </div>
           <span className="logo-text">Hylire</span>
         </div>
+        <ThemeToggle variant="icon" />
       </div>
 
       <nav className="sidebar-nav">
@@ -68,6 +71,11 @@ const Navigation = () => {
       </nav>
 
       <div className="sidebar-footer">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 8px 4px' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Theme Mode</span>
+          <ThemeToggle variant="segmented" />
+        </div>
+
         <div className="user-profile-summary">
           <div className="user-avatar">
             {getInitials(user.fullName || user.email)}
