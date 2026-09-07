@@ -17,6 +17,7 @@ const DEFAULT_INITIAL_STATE = {
   materials: [],
   brickEstimations: [],
   costEstimations: [],
+  aiEstimations: [],
   documents: [],
   chatMessages: []
 };
@@ -39,6 +40,7 @@ export const getLocalStore = () => {
       materials: Array.isArray(parsed.materials) ? parsed.materials : [],
       brickEstimations: Array.isArray(parsed.brickEstimations) ? parsed.brickEstimations : [],
       costEstimations: Array.isArray(parsed.costEstimations) ? parsed.costEstimations : [],
+      aiEstimations: Array.isArray(parsed.aiEstimations) ? parsed.aiEstimations : [],
       documents: Array.isArray(parsed.documents) ? parsed.documents : [],
       chatMessages: Array.isArray(parsed.chatMessages) ? parsed.chatMessages : []
     };
@@ -190,32 +192,59 @@ export const localTasks = {
 
 // Estimations
 export const localEstimations = {
-  listByProject(projectId) {
+  listByProject(projectId, siteId) {
     const store = getLocalStore();
+    const matches = item => {
+      if (item.projectId !== projectId) return false;
+      if (siteId && item.siteId && item.siteId !== siteId) return false;
+      return true;
+    };
     return {
-      bricks: store.brickEstimations.filter(b => b.projectId === projectId),
-      materials: store.materials.filter(m => m.projectId === projectId),
-      costs: store.costEstimations.filter(c => c.projectId === projectId)
+      bricks: (store.brickEstimations || []).filter(matches),
+      materials: (store.materials || []).filter(matches),
+      costs: (store.costEstimations || []).filter(matches),
+      aiEstimations: (store.aiEstimations || []).filter(matches)
     };
   },
   saveBrick(item) {
     const store = getLocalStore();
-    const newDoc = { id: `be-${Date.now()}`, ...item, createdAt: new Date().toISOString() };
+    const newDoc = { id: `be-${Date.now()}`, siteId: item.siteId || null, ...item, createdAt: new Date().toISOString() };
     store.brickEstimations.push(newDoc);
     saveLocalStore(store);
     return newDoc;
   },
   saveMaterial(item) {
     const store = getLocalStore();
-    const newDoc = { id: `mat-${Date.now()}`, ...item, createdAt: new Date().toISOString() };
+    const newDoc = { id: `mat-${Date.now()}`, siteId: item.siteId || null, ...item, createdAt: new Date().toISOString() };
     store.materials.push(newDoc);
     saveLocalStore(store);
     return newDoc;
   },
   saveCost(item) {
     const store = getLocalStore();
-    const newDoc = { id: `ce-${Date.now()}`, ...item, createdAt: new Date().toISOString() };
+    const newDoc = { id: `ce-${Date.now()}`, siteId: item.siteId || null, ...item, createdAt: new Date().toISOString() };
     store.costEstimations.push(newDoc);
+    saveLocalStore(store);
+    return newDoc;
+  },
+  saveAiEstimate(item) {
+    const store = getLocalStore();
+    if (!store.aiEstimations) store.aiEstimations = [];
+    const newDoc = { id: `ai-${Date.now()}`, siteId: item.siteId || null, ...item, createdAt: new Date().toISOString() };
+    store.aiEstimations.push(newDoc);
+    // Also record in costEstimations so dashboard financial telemetry tracks it
+    store.costEstimations.push({
+      id: `ce-${Date.now()}`,
+      projectId: item.projectId,
+      siteId: item.siteId || null,
+      materialCost: Math.round(item.primary_cost * 0.60),
+      laborCost: Math.round(item.primary_cost * 0.25),
+      transportCost: Math.round(item.primary_cost * 0.08),
+      miscCost: Math.round(item.primary_cost * 0.07),
+      totalEstimatedCost: item.primary_cost,
+      source: 'AI Multi-Model Estimator',
+      createdAt: new Date().toISOString()
+    });
     saveLocalStore(store);
     return newDoc;
   },
@@ -227,6 +256,8 @@ export const localEstimations = {
       store.materials = store.materials.filter(m => m.id !== id);
     } else if (type === 'cost' || type === 'costs') {
       store.costEstimations = store.costEstimations.filter(c => c.id !== id);
+    } else if (type === 'ai' || type === 'aiEstimations') {
+      store.aiEstimations = (store.aiEstimations || []).filter(a => a.id !== id);
     }
     saveLocalStore(store);
     return true;

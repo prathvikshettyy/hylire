@@ -30,6 +30,8 @@ app.use('/api/estimation', estimationsRouter);
 app.use('/api/documents', documentsRouter);
 app.use('/api/chat', chatRouter);
 
+app.get('/api/health', (req, res) => res.json({ status: 'healthy', uptime: process.uptime() }));
+
 // Alias Routes matching exact spec requirements
 app.use('/api/users/profile', (req, res) => authRouter.handle(req, res));
 app.get('/api/sites/:siteId/tasks', async (req, res) => {
@@ -42,9 +44,15 @@ app.get('/api/sites/:siteId/tasks', async (req, res) => {
 });
 app.get('/api/projects/:projectId/estimations', async (req, res) => {
     try {
-        const bricks = await db.brickEstimations.listByProject(req.params.projectId);
-        const materials = await db.materials.listByProject(req.params.projectId);
-        const costs = await db.costEstimations.listByProject(req.params.projectId);
+        const { siteId } = req.query;
+        let bricks = await db.brickEstimations.listByProject(req.params.projectId);
+        let materials = await db.materials.listByProject(req.params.projectId);
+        let costs = await db.costEstimations.listByProject(req.params.projectId);
+        if (siteId) {
+            bricks = (bricks || []).filter(b => String(b.site_id || b.siteId) === String(siteId));
+            materials = (materials || []).filter(m => String(m.site_id || m.siteId) === String(siteId));
+            costs = (costs || []).filter(c => String(c.site_id || c.siteId) === String(siteId));
+        }
         res.json({ bricks, materials, costs });
     } catch (error) {
         res.status(500).json({ error: error.message });

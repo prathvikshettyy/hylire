@@ -146,20 +146,51 @@
       "createdAt": "2026-09-02T13:39:55.058Z"
     }
   ],
-  "costEstimations": [],
-  "documents": [
+  "costEstimations": [
     {
-      "id": "d-1788355237940",
+      "id": "ce-1788624622845",
+      "projectId": "p-1788354869086",
+      "materialCost": 15420780,
+      "laborCost": 6425325,
+      "transportCost": 2056104,
+      "miscCost": 1799091,
+      "totalEstimatedCost": 25701300,
+      "createdAt": "2026-09-05T16:10:22.845Z"
+    },
+    {
+      "id": "ce-1788788818174",
       "projectId": "p-1788354869075",
-      "name": "Fee Structure.jpeg",
-      "fileUrl": "http://localhost:5000/uploads/documents/1788355237938_Fee_Structure.jpeg",
-      "fileType": "image/jpeg",
-      "fileSize": "121.19 KB",
-      "category": "Blueprints",
-      "uploadedBy": "John Builder",
-      "createdAt": "2026-09-02T13:20:37.940Z"
+      "materialCost": 866,
+      "laborCost": 361,
+      "transportCost": 115,
+      "miscCost": 101,
+      "totalEstimatedCost": 1442.88,
+      "createdAt": "2026-09-07T13:46:58.174Z"
+    },
+    {
+      "id": "ce-1788807272131",
+      "projectId": "1",
+      "siteId": "1",
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-09-07T18:54:32.131Z"
+    },
+    {
+      "id": "ce-1788807272663",
+      "projectId": "1",
+      "siteId": "1",
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-09-07T18:54:32.663Z"
     }
   ],
+  "documents": [],
   "chatMessages": [
     {
       "id": "msg-1788355245584",
@@ -169,6 +200,15 @@
       "messageText": "fdkgjlsk;l",
       "fileUrl": null,
       "createdAt": "2026-09-02T13:20:45.584Z"
+    },
+    {
+      "id": "msg-1788807330684",
+      "projectId": "p-1788354869086",
+      "senderId": "u-1788355886002",
+      "senderName": "Prathvik A Shetty",
+      "messageText": "kljk;",
+      "fileUrl": null,
+      "createdAt": "2026-09-07T18:55:30.684Z"
     }
   ]
 }

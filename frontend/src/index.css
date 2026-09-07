@@ -239,7 +239,30 @@ body {
 }
 
 @media (max-width: 992px) {
-  .app-content {
+  :root {
+    --sidebar-width: 210px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 68px;
+  }
+  .sidebar-logo .logo-text,
+  .nav-item span,
+  .sidebar-footer .user-info,
+  .sidebar-footer > div:first-child span {
+    display: none;
+  }
+  .nav-item {
+    justify-content: center;
+    padding: 10px;
+  }
+  .user-profile-summary {
+    justify-content: center;
+    padding: 6px;
+  }
+  .btn-logout {
     margin-left: 0;
   }
 }
@@ -858,12 +881,20 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 32px;
+  align-items: start;
 }
 
 @media (max-width: 992px) {
   .calc-grid {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
+}
+
+.calc-results-sticky {
+  position: sticky;
+  top: calc(var(--header-height) + 16px);
+  z-index: 10;
 }
 
 .calc-results {
