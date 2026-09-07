@@ -1,15 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const ThemeContext = createContext();
+const ThemeContext = createContext(null);
 
 export const ThemeProvider = ({ children }) => {
-  // Initialize theme from localStorage or system preference
+  // Support localStorage keys 'hylire-theme' or 'hylire_theme', default to dark
   const [theme, setThemeState] = useState(() => {
-    const saved = localStorage.getItem('hylire-theme');
-    if (saved === 'light' || saved === 'dark') {
+    const saved = localStorage.getItem('hylire-theme') || localStorage.getItem('hylire_theme');
+    if (saved === 'light' || saved === 'dark' || saved === 'cream') {
       return saved;
     }
-    // Default to system preference or dark
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
       return 'light';
     }
@@ -17,18 +16,19 @@ export const ThemeProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    // Apply theme attribute to html/root element
     document.documentElement.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme);
     document.body.className = theme;
     localStorage.setItem('hylire-theme', theme);
+    localStorage.setItem('hylire_theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
-    setThemeState(prev => (prev === 'dark' ? 'light' : 'dark'));
+    setThemeState(prev => (prev === 'dark' ? 'cream' : (prev === 'cream' ? 'light' : 'dark')));
   };
 
   const setTheme = (newTheme) => {
-    if (newTheme === 'light' || newTheme === 'dark') {
+    if (newTheme === 'light' || newTheme === 'dark' || newTheme === 'cream') {
       setThemeState(newTheme);
     }
   };
@@ -42,8 +42,5 @@ export const ThemeProvider = ({ children }) => {
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
+  return context || { theme: 'dark', isDark: true, toggleTheme: () => {}, setTheme: () => {} };
 };

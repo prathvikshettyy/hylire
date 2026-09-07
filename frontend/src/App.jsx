@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import Navigation from './components/Navigation';
 import ThemeToggle from './components/ThemeToggle';
 
@@ -35,6 +35,7 @@ const PrivateRoute = ({ children }) => {
 // Main Layout Wrapper for Authenticated Users
 const AppLayout = ({ children }) => {
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   
   return (
     <div className="app-container">

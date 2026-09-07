@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from '../components/ThemeToggle';
 
 const Register = () => {
@@ -12,6 +13,7 @@ const Register = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -39,7 +41,7 @@ const Register = () => {
   };
 
   return (
-    <div className="auth-wrapper">
+    <div className="auth-wrapper" style={{ position: 'relative' }}>
       {/* Dynamic Ambient Background orbs */}
       <div className="bg-glow-container">
         <div className="bg-orb orb-1"></div>
@@ -47,11 +49,10 @@ const Register = () => {
       </div>
 
       {/* Floating Theme Selector */}
-      <div className="auth-theme-floating">
+      <div className="auth-theme-floating" style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Theme</span>
         <ThemeToggle variant="icon" />
       </div>
-
       <div className="auth-card">
         <div className="auth-header">
           <div className="logo-icon" style={{ margin: '0 auto', width: 48, height: 48 }}>

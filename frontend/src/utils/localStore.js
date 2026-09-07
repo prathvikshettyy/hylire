@@ -31,6 +31,16 @@ export const getLocalStore = () => {
       return DEFAULT_INITIAL_STATE;
     }
     const parsed = JSON.parse(raw);
+    
+    // Auto-remove demo projects if they exist in localStorage
+    if (parsed.projects && parsed.projects.some(p => p.id === 'p-101' || p.id === 'p-102')) {
+      parsed.projects = parsed.projects.filter(p => p.id !== 'p-101' && p.id !== 'p-102');
+      parsed.sites = parsed.sites ? parsed.sites.filter(s => s.projectId !== 'p-101' && s.projectId !== 'p-102') : [];
+      parsed.tasks = parsed.tasks ? parsed.tasks.filter(t => t.siteId !== 's-101' && t.siteId !== 's-102') : [];
+      parsed.materials = parsed.materials ? parsed.materials.filter(m => m.projectId !== 'p-101' && m.projectId !== 'p-102') : [];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+    }
+
     // Ensure all required collections exist
     return {
       users: Array.isArray(parsed.users) && parsed.users.length > 0 ? parsed.users : DEFAULT_INITIAL_STATE.users,
