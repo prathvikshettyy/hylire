@@ -47,6 +47,14 @@
       "fullName": "Prathvik A Shetty",
       "role": "builder",
       "createdAt": "2026-09-02T13:31:26.002Z"
+    },
+    {
+      "id": "u-1789821806532",
+      "email": "pratham@hylire.com",
+      "password": "shetty@2007",
+      "fullName": "pratham shetty",
+      "role": "engineer",
+      "createdAt": "2026-09-19T12:43:26.532Z"
     }
   ],
   "projects": [
@@ -60,6 +68,17 @@
       "endDate": "2027-08-06",
       "status": "planning",
       "createdAt": "2026-09-02T13:14:29.086Z"
+    },
+    {
+      "id": "p-1789872275380",
+      "name": "Alva's",
+      "description": "egee",
+      "clientId": "u-3",
+      "budget": 12000000,
+      "startDate": "2026-09-20",
+      "endDate": "2027-09-22",
+      "status": "planning",
+      "createdAt": "2026-09-20T02:44:35.380Z"
     }
   ],
   "sites": [
@@ -71,6 +90,14 @@
       "status": "active",
       "createdAt": "2026-09-02T13:14:29.089Z",
       "updatedAt": "2026-09-02T17:00:55.442Z"
+    },
+    {
+      "id": "s-1789872275394",
+      "projectId": "p-1789872275380",
+      "name": "Alva's - Main Site",
+      "address": "Primary Project Site",
+      "status": "active",
+      "createdAt": "2026-09-20T02:44:35.394Z"
     }
   ],
   "tasks": [
@@ -188,6 +215,50 @@
       "miscCost": 589176,
       "totalEstimatedCost": 8416800,
       "createdAt": "2026-09-07T18:54:32.663Z"
+    },
+    {
+      "id": "ce-1789822413353",
+      "projectId": "p-1788354869075",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-09-19T12:53:33.353Z"
+    },
+    {
+      "id": "ce-1789824034343",
+      "projectId": "p-1788354869075",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-09-19T13:20:34.343Z"
+    },
+    {
+      "id": "ce-1790877244085",
+      "projectId": "p-1789872275380",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-10-01T17:54:04.085Z"
+    },
+    {
+      "id": "ce-1790877818832",
+      "projectId": "p-1789872275372",
+      "siteId": null,
+      "materialCost": 342684,
+      "laborCost": 142785,
+      "transportCost": 45691,
+      "miscCost": 39980,
+      "totalEstimatedCost": 571140,
+      "createdAt": "2026-10-01T18:03:38.832Z"
     }
   ],
   "documents": [],

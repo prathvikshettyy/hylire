@@ -42,5 +42,5 @@ export const ThemeProvider = ({ children }) => {
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
-  return context || { theme: 'dark', isDark: true, toggleTheme: () => {}, setTheme: () => {} };
+  return context || { theme: 'dark', isDark: true, toggleTheme: () => { }, setTheme: () => { } };
 };

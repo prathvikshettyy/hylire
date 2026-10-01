@@ -16,7 +16,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     if (!email || !password) {
       setError('Please fill in all fields.');
       return;
@@ -81,10 +81,10 @@ const Login = () => {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label">Email Address</label>
-            <input 
-              type="email" 
-              className="form-input" 
-              placeholder="e.g. admin@hylire.com" 
+            <input
+              type="email"
+              className="form-input"
+              placeholder="e.g. admin@hylire.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -93,19 +93,19 @@ const Login = () => {
 
           <div className="form-group" style={{ marginBottom: 24 }}>
             <label className="form-label">Password</label>
-            <input 
-              type="password" 
-              className="form-input" 
-              placeholder="••••••••" 
+            <input
+              type="password"
+              className="form-input"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
+          <button
+            type="submit"
+            className="btn btn-primary"
             style={{ width: '100%', padding: '12px' }}
             disabled={loading}
           >
@@ -113,8 +113,18 @@ const Login = () => {
           </button>
         </form>
 
-        <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          Don't have an account? <Link to="/register" style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 600 }}>Create account</Link>
+        <div style={{
+          marginTop: '24px',
+          textAlign: 'center',
+          fontSize: '0.82rem',
+          color: 'var(--text-muted)',
+          lineHeight: 1.5,
+          padding: '10px 14px',
+          background: 'var(--bg-subtle)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color)'
+        }}>
+          <span>Need an account? New accounts can only be created by a <strong>Builder</strong>. Contact your project administrator for credentials.</span>
         </div>
 
         <div style={{
@@ -128,40 +138,40 @@ const Login = () => {
         }}>
           <div style={{ fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)' }}>Quick Demo Logins (Password: <code>password123</code>):</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => handleQuickLogin('admin@hylire.com')}
               className="btn-secondary"
               style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer' }}
             >
               Admin / Builder
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => handleQuickLogin('engineer@hylire.com')}
               className="btn-secondary"
               style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer' }}
             >
               Engineer
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => handleQuickLogin('client@hylire.com')}
               className="btn-secondary"
               style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer' }}
             >
               Client
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => handleQuickLogin('contractor@hylire.com')}
               className="btn-secondary"
               style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer' }}
             >
               Contractor
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => handleQuickLogin('worker@hylire.com')}
               className="btn-secondary"
               style={{ padding: '4px 8px', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer' }}

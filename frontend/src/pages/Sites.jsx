@@ -130,8 +130,8 @@ const Sites = () => {
           <p style={{ color: 'var(--text-muted)' }}>Monitor safety, workforce and operational status per site</p>
         </div>
         {isAuthorized && (
-          <button 
-            onClick={() => setShowAddForm(!showAddForm)} 
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
             className="btn btn-primary"
             style={{ display: 'flex', gap: 6 }}
           >
@@ -147,7 +147,7 @@ const Sites = () => {
           <form onSubmit={handleCreate}>
             <div className="form-group">
               <label className="form-label">Associated Project</label>
-              <select 
+              <select
                 className="form-select"
                 value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
@@ -162,30 +162,30 @@ const Sites = () => {
 
             <div className="form-group">
               <label className="form-label">Site Identifier/Name</label>
-              <input 
-                type="text" 
-                className="form-input" 
-                placeholder="e.g. Block A Foundation" 
-                value={name} 
-                onChange={(e) => setName(e.target.value)} 
-                required 
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Block A Foundation"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
               />
             </div>
 
             <div className="form-group">
               <label className="form-label">Site Address / Coordinates</label>
-              <input 
-                type="text" 
-                className="form-input" 
-                placeholder="e.g. Plot 12, Industrial zone" 
-                value={address} 
-                onChange={(e) => setAddress(e.target.value)} 
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Plot 12, Industrial zone"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
               />
             </div>
 
             <div className="form-group">
               <label className="form-label">Assigned Site Supervisor/Engineer</label>
-              <select 
+              <select
                 className="form-select"
                 value={engineerId}
                 onChange={(e) => setEngineerId(e.target.value)}
@@ -217,7 +217,7 @@ const Sites = () => {
                   </span>
                 </div>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 8 }}>{site.name}</h3>
-                
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.825rem', color: 'var(--text-muted)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <MapPin size={14} style={{ color: 'var(--accent-color)' }} />
@@ -234,27 +234,27 @@ const Sites = () => {
               {isAuthorized && (
                 <div style={{ display: 'flex', gap: 8, borderTop: '1px solid var(--border-color)', paddingTop: 14, justifyContent: 'flex-end' }}>
                   {site.status !== 'active' && (
-                    <button 
-                      onClick={() => handleStatusChange(site.id, 'active')} 
-                      className="btn btn-secondary" 
+                    <button
+                      onClick={() => handleStatusChange(site.id, 'active')}
+                      className="btn btn-secondary"
                       style={{ padding: '6px 12px', fontSize: '0.775rem' }}
                     >
                       Activate
                     </button>
                   )}
                   {site.status !== 'paused' && site.status !== 'completed' && (
-                    <button 
-                      onClick={() => handleStatusChange(site.id, 'paused')} 
-                      className="btn btn-secondary" 
+                    <button
+                      onClick={() => handleStatusChange(site.id, 'paused')}
+                      className="btn btn-secondary"
                       style={{ padding: '6px 12px', fontSize: '0.775rem' }}
                     >
                       Pause
                     </button>
                   )}
                   {site.status !== 'completed' && (
-                    <button 
-                      onClick={() => handleStatusChange(site.id, 'completed')} 
-                      className="btn btn-primary" 
+                    <button
+                      onClick={() => handleStatusChange(site.id, 'completed')}
+                      className="btn btn-primary"
                       style={{ padding: '6px 12px', fontSize: '0.775rem' }}
                     >
                       Complete

@@ -116,7 +116,7 @@ const Tasks = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
     const effectiveSiteId = siteId || selectedSiteId || (sites.length > 0 ? sites[0].id : '');
-    
+
     if (!name.trim()) {
       alert('Please enter a task headline.');
       return;
@@ -216,10 +216,10 @@ const Tasks = () => {
           <h1 className="header-title" style={{ fontSize: '2rem' }}>Task Board</h1>
           <p style={{ color: 'var(--text-muted)' }}>Organize daily operations and manage workforce checklists</p>
         </div>
-        
+
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Site Selector dropdown */}
-          <select 
+          <select
             className="form-select"
             style={{ width: 'auto', minWidth: 200 }}
             value={selectedSiteId}
@@ -238,13 +238,13 @@ const Tasks = () => {
           </select>
 
           {canManage && (
-            <button 
+            <button
               onClick={() => {
                 if (!siteId && (selectedSiteId || sites.length > 0)) {
                   setSiteId(selectedSiteId || sites[0].id);
                 }
                 setShowAddForm(!showAddForm);
-              }} 
+              }}
               className="btn btn-primary"
               style={{ display: 'flex', gap: 6, alignItems: 'center' }}
             >
@@ -272,7 +272,7 @@ const Tasks = () => {
           <form onSubmit={handleCreate}>
             <div className="form-group">
               <label className="form-label">Select Target Site</label>
-              <select 
+              <select
                 className="form-select"
                 value={siteId || selectedSiteId || (sites.length > 0 ? sites[0].id : '')}
                 onChange={(e) => setSiteId(e.target.value)}
@@ -290,21 +290,21 @@ const Tasks = () => {
 
             <div className="form-group">
               <label className="form-label">Task Headline</label>
-              <input 
-                type="text" 
-                className="form-input" 
-                placeholder="e.g. Foundation Pour - Stage 2" 
-                value={name} 
-                onChange={(e) => setName(e.target.value)} 
-                required 
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Foundation Pour - Stage 2"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
               />
             </div>
 
             <div className="form-group">
               <label className="form-label">Task Description</label>
-              <textarea 
-                className="form-textarea" 
-                rows="3" 
+              <textarea
+                className="form-textarea"
+                rows="3"
                 placeholder="List work requirements, materials needed..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -314,7 +314,7 @@ const Tasks = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div className="form-group">
                 <label className="form-label">Assign To</label>
-                <select 
+                <select
                   className="form-select"
                   value={assignedTo}
                   onChange={(e) => setAssignedTo(e.target.value)}
@@ -328,7 +328,7 @@ const Tasks = () => {
 
               <div className="form-group">
                 <label className="form-label">Priority Level</label>
-                <select 
+                <select
                   className="form-select"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
@@ -342,11 +342,11 @@ const Tasks = () => {
 
             <div className="form-group">
               <label className="form-label">Task Deadline</label>
-              <input 
-                type="date" 
-                className="form-input" 
-                value={deadline} 
-                onChange={(e) => setDeadline(e.target.value)} 
+              <input
+                type="date"
+                className="form-input"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
               />
             </div>
 
@@ -366,7 +366,7 @@ const Tasks = () => {
                   <span>{col.label}</span>
                   <span className={`badge ${col.badgeClass}`} style={{ fontSize: '0.65rem' }}>{colTasks.length}</span>
                 </div>
-                
+
                 {colTasks.length === 0 ? (
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', textAlign: 'center', padding: '24px 0', border: '1px dashed rgba(255,255,255,0.03)', borderRadius: 12 }}>
                     No Tasks
@@ -391,7 +391,7 @@ const Tasks = () => {
                             {getTeamName(task.assignedTo)}
                           </span>
                         </div>
-                        
+
                         <div className="kanban-card-footer">
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: 'var(--text-dim)' }}>
                             <Calendar size={10} />
@@ -399,9 +399,9 @@ const Tasks = () => {
                           </div>
 
                           {(task.status !== 'done' && task.stage !== 'done') && (
-                            <button 
+                            <button
                               onClick={() => handleUpdateStatus(task.id, task.status || task.stage)}
-                              className="btn btn-secondary" 
+                              className="btn btn-secondary"
                               style={{ padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center' }}
                               title="Advance Status"
                             >

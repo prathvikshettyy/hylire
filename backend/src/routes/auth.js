@@ -2,15 +2,33 @@ const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
 
-// Register API
+// Register API - Restricted: Only Builder/Admin can create accounts
 router.post('/register', async (req, res) => {
-    const { email, password, fullName, role } = req.body;
-    
-    if (!email || !password || !fullName || !role) {
-        return res.status(400).json({ error: 'All fields (email, password, fullName, role) are required' });
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authentication required. Only Builders can create accounts.' });
     }
 
+    const token = authHeader.split(' ')[1];
+    // Extract userId from token (matches mock-jwt-token-for-u-1-TIMESTAMP or mock-token-u-1-TIMESTAMP)
+    const match = token.match(/mock-(?:jwt-)?token-(?:for-)?(.+)-(\d+)$/);
+    if (!match) {
+        return res.status(401).json({ error: 'Invalid or expired authorization token.' });
+    }
+
+    const creatorId = match[1];
     try {
+        const creator = await db.users.findById(creatorId);
+        if (!creator || (creator.role !== 'builder' && creator.role !== 'admin')) {
+            return res.status(403).json({ error: 'Access denied. Account creation is restricted to Builders only.' });
+        }
+
+        const { email, password, fullName, role } = req.body;
+        
+        if (!email || !password || !fullName || !role) {
+            return res.status(400).json({ error: 'All fields (email, password, fullName, role) are required' });
+        }
+
         const existingUser = await db.users.findByEmail(email);
         if (existingUser) {
             return res.status(400).json({ error: 'User with this email already exists' });
@@ -25,7 +43,7 @@ router.post('/register', async (req, res) => {
 
         // Omit password in response
         const { password: _, ...userWithoutPassword } = newUser;
-        res.status(201).json({ message: 'Registration successful', user: userWithoutPassword });
+        res.status(201).json({ message: 'User account created successfully', user: userWithoutPassword });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -91,7 +109,7 @@ router.get('/profile', async (req, res) => {
 
     const token = authHeader.split(' ')[1];
     // Extract userId from token (mock-jwt-token-for-u-1-TIMESTAMP)
-    const match = token.match(/mock-jwt-token-for-([^-]+)/);
+    const match = token.match(/mock-(?:jwt-)?token-(?:for-)?(.+)-(\d+)$/);
     if (!match) {
         return res.status(401).json({ error: 'Invalid token' });
     }

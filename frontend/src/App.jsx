@@ -17,8 +17,8 @@ import Documents from './pages/Documents';
 import TeamChat from './pages/TeamChat';
 import UserProfile from './pages/UserProfile';
 
-// Private Route Wrapper
-const PrivateRoute = ({ children }) => {
+// Private Route Wrapper with optional role-based access control
+const PrivateRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -29,14 +29,22 @@ const PrivateRoute = ({ children }) => {
     );
   }
 
-  return user ? children : <Navigate to="/login" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 };
 
 // Main Layout Wrapper for Authenticated Users
 const AppLayout = ({ children }) => {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  
+
   return (
     <div className="app-container">
       {/* Dynamic Ambient Background orbs */}
@@ -44,7 +52,7 @@ const AppLayout = ({ children }) => {
         <div className="bg-orb orb-1"></div>
         <div className="bg-orb orb-2"></div>
       </div>
-      
+
       {/* Sidebar Navigation */}
       <Navigation />
 
@@ -52,12 +60,12 @@ const AppLayout = ({ children }) => {
       <div className="app-content">
         <header className="header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ 
-              fontSize: '0.85rem', 
-              color: 'var(--text-muted)', 
-              background: 'var(--bg-subtle)', 
-              border: '1px solid var(--border-color)', 
-              padding: '4px 10px', 
+            <span style={{
+              fontSize: '0.85rem',
+              color: 'var(--text-muted)',
+              background: 'var(--bg-subtle)',
+              border: '1px solid var(--border-color)',
+              padding: '4px 10px',
               borderRadius: 12,
               display: 'inline-flex',
               alignItems: 'center',
@@ -67,7 +75,7 @@ const AppLayout = ({ children }) => {
               Secure Network: Online
             </span>
           </div>
-          
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
               Logged in as: <strong style={{ color: 'var(--text-primary)' }}>{user?.fullName}</strong>
@@ -89,7 +97,15 @@ const App = () => {
           <Routes>
             {/* Public Authentication Routes */}
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+
+            {/* Builder-only Account Creation & Provisioning Portal */}
+            <Route path="/register" element={
+              <PrivateRoute allowedRoles={['builder', 'admin']}>
+                <AppLayout>
+                  <Register />
+                </AppLayout>
+              </PrivateRoute>
+            } />
 
             {/* Secure Internal Portal Routes */}
             <Route path="/" element={
@@ -99,7 +115,7 @@ const App = () => {
                 </AppLayout>
               </PrivateRoute>
             } />
-            
+
             <Route path="/projects" element={
               <PrivateRoute>
                 <AppLayout>

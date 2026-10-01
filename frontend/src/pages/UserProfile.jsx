@@ -100,7 +100,7 @@ const UserProfile = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
             {/* Dark Mode Card */}
-            <div 
+            <div
               onClick={() => setTheme('dark')}
               style={{
                 padding: '20px',
@@ -134,7 +134,7 @@ const UserProfile = () => {
             </div>
 
             {/* Light Mode Card */}
-            <div 
+            <div
               onClick={() => setTheme('light')}
               style={{
                 padding: '20px',

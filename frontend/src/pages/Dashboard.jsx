@@ -1,23 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Building, 
-  MapPin, 
-  CheckCircle, 
-  IndianRupee, 
-  AlertCircle, 
+import { Link } from 'react-router-dom';
+import {
+  Building,
+  MapPin,
+  CheckCircle,
+  IndianRupee,
+  AlertCircle,
   RefreshCw,
   BarChart2,
   TrendingUp,
-  PieChart
+  PieChart,
+  UserPlus,
+  Receipt
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { computeDashboardStats } from '../utils/localStore';
+import SpentBreakdownModal from '../components/SpentBreakdownModal';
 
 const Dashboard = () => {
   const { user, token, apiBaseUrl } = useAuth();
   const [stats, setStats] = useState(() => computeDashboardStats());
   const [loading, setLoading] = useState(false);
   const [activeHoverPoint, setActiveHoverPoint] = useState(null);
+  const [selectedProjectForSpend, setSelectedProjectForSpend] = useState(null);
 
   const fetchStats = async () => {
     // 1. Instantly compute stats from local storage
@@ -47,8 +52,8 @@ const Dashboard = () => {
     fetchStats();
   }, [token]);
 
-  const taskPercentage = stats.totalTasks > 0 
-    ? Math.round((stats.completedTasks / stats.totalTasks) * 100) 
+  const taskPercentage = stats.totalTasks > 0
+    ? Math.round((stats.completedTasks / stats.totalTasks) * 100)
     : 0;
 
   // Extract dynamic graph data safely
@@ -107,7 +112,7 @@ const Dashboard = () => {
       </div>
 
       {/* Grid Key Metrics */}
-      <div className="dashboard-grid">
+      <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         <div className="card stat-card">
           <div className="stat-icon" style={{ color: 'var(--primary-color)', background: 'var(--primary-glow)' }}>
             <Building size={24} />
@@ -139,12 +144,32 @@ const Dashboard = () => {
         </div>
 
         <div className="card stat-card">
-          <div className="stat-icon" style={{ color: 'var(--secondary-color)', background: 'rgba(236,72,153,0.12)' }}>
+          <div className="stat-icon" style={{ color: 'var(--ink)', background: 'var(--soft)' }}>
             <IndianRupee size={24} />
           </div>
           <div className="stat-info">
             <span className="value stat-value">₹{((Number(stats.totalBudget) || 0) / 10000000).toFixed(2)} Cr</span>
-            <span className="stat-label">Total Budget Allocation</span>
+            <span className="stat-label">Total Budget Allocated</span>
+          </div>
+        </div>
+
+        {/* DEDICATED BUDGET SPENT STAT CARD */}
+        <div className="card stat-card" style={{ border: stats.totalSpent > stats.totalBudget && stats.totalBudget > 0 ? '2px solid var(--danger)' : undefined }}>
+          <div className="stat-icon" style={{ 
+            color: stats.totalSpent > stats.totalBudget && stats.totalBudget > 0 ? 'var(--danger)' : 'var(--hi-vis-text)', 
+            background: stats.totalSpent > stats.totalBudget && stats.totalBudget > 0 ? 'var(--soft)' : 'var(--hi-vis)' 
+          }}>
+            <IndianRupee size={24} />
+          </div>
+          <div className="stat-info">
+            <span className="value stat-value" style={{ color: stats.totalSpent > stats.totalBudget && stats.totalBudget > 0 ? 'var(--danger)' : undefined }}>
+              ₹{((Number(stats.totalSpent) || 0) >= 10000000) 
+                ? `${((Number(stats.totalSpent) || 0) / 10000000).toFixed(2)} Cr` 
+                : `${((Number(stats.totalSpent) || 0) / 100000).toFixed(2)} L`}
+            </span>
+            <span className="stat-label">
+              Total Budget Spent ({stats.budgetUtilizationPercent || 0}%)
+            </span>
           </div>
         </div>
       </div>
@@ -156,7 +181,7 @@ const Dashboard = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div>
               <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <TrendingUp size={18} style={{ color: 'var(--primary-color)' }} /> 
+                <TrendingUp size={18} style={{ color: 'var(--primary-color)' }} />
                 Monthly Expenditure Trend (₹ Lakhs)
               </h2>
               <span style={{ fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 600 }}>
@@ -196,12 +221,12 @@ const Dashboard = () => {
                 {/* Data Nodes */}
                 {points.map((pt, idx) => (
                   <g key={idx}>
-                    <circle 
-                      cx={pt.x} 
-                      cy={pt.y} 
-                      r={activeHoverPoint === idx ? "7" : "5"} 
-                      fill="var(--bg-card-solid)" 
-                      stroke="var(--primary-color)" 
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={activeHoverPoint === idx ? "7" : "5"}
+                      fill="var(--bg-card-solid)"
+                      stroke="var(--primary-color)"
                       strokeWidth="3"
                       style={{ cursor: 'pointer', transition: 'all 0.2s' }}
                       onMouseEnter={() => setActiveHoverPoint(idx)}
@@ -231,10 +256,15 @@ const Dashboard = () => {
 
         {/* GRAPH 2: Project Allocated vs Spent Bar Chart */}
         <div className="card">
-          <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <BarChart2 size={18} style={{ color: 'var(--accent-color)' }} />
-            Budget vs Spend Breakdown
-          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+              <BarChart2 size={18} style={{ color: 'var(--accent-color)' }} />
+              Budget vs Spend Breakdown
+            </h2>
+            <Link to="/projects" style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', textDecoration: 'none' }}>
+              View all →
+            </Link>
+          </div>
 
           {projectCompData.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -243,28 +273,59 @@ const Dashboard = () => {
                 const spent = Number(p.spent) || 0;
                 const spentPercent = allocated > 0 ? Math.min(100, Math.round((spent / allocated) * 100)) : 0;
                 const remaining = Math.max(0, allocated - spent);
+                const isOver = spent > allocated && allocated > 0;
+
                 return (
                   <div key={p.id || idx} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.775rem' }}>
-                        ₹{spent.toFixed(2)}L / <strong style={{ color: 'var(--text-primary)' }}>₹{allocated.toFixed(2)}L</strong>
-                      </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ color: isOver ? 'var(--danger)' : 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600 }}>
+                          Spent: ₹{spent.toFixed(2)}L / <strong style={{ color: 'var(--text-primary)' }}>₹{allocated.toFixed(2)}L</strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProjectForSpend({ id: p.id, name: p.name, budget: p.rawAllocated, spent: p.rawSpent })}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            padding: '4px 8px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            backgroundColor: 'var(--soft)',
+                            color: 'var(--ink)',
+                            border: '1px solid var(--line)',
+                            borderRadius: 4,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Receipt size={12} />
+                          <span>Breakdown</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Dual Stacked Progress Bar */}
-                    <div style={{ width: '100%', height: 10, background: 'var(--bg-subtle)', borderRadius: 5, overflow: 'hidden', position: 'relative' }}>
-                      <div style={{
-                        width: `${spentPercent}%`,
-                        height: '100%',
-                        background: 'linear-gradient(90deg, var(--accent-color), var(--secondary-color))',
-                        borderRadius: 5,
-                        transition: 'width 0.8s ease-in-out'
-                      }} />
+                    <div style={{ width: '100%', height: 12, background: 'var(--bg-subtle)', borderRadius: 6, border: '1px solid var(--line)', overflow: 'hidden', position: 'relative' }}>
+                      {isOver ? (
+                        <div style={{ display: 'flex', width: '100%', height: '100%' }}>
+                          <div style={{ width: '70%', height: '100%', backgroundColor: 'var(--info)' }} />
+                          <div className="hazard-stripe" style={{ width: '30%', height: '100%' }} />
+                        </div>
+                      ) : (
+                        <div style={{
+                          width: `${spentPercent}%`,
+                          height: '100%',
+                          backgroundColor: spentPercent > 85 ? 'var(--warning)' : 'var(--success)',
+                          borderRadius: 5,
+                          transition: 'width 0.8s ease-in-out'
+                        }} />
+                      )}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem', color: 'var(--text-dim)' }}>
-                      <span>Utilized: {spentPercent}%</span>
-                      <span>Remaining: ₹{remaining.toFixed(2)}L</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                      <span>Utilised: {spentPercent}%</span>
+                      <span>{isOver ? `Over budget by ₹${(spent - allocated).toFixed(2)}L` : `Remaining: ₹${remaining.toFixed(2)}L`}</span>
                     </div>
                   </div>
                 );
@@ -368,8 +429,8 @@ const Dashboard = () => {
                 62.4% Safety Margin
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Based on actual project costs of ₹{stats.projectComparison && stats.projectComparison.length > 0 
-                  ? ((stats.projectComparison.reduce((acc, p) => acc + p.spent, 0) || 0) * 100000).toLocaleString('en-IN') 
+                Based on actual project costs of ₹{stats.projectComparison && stats.projectComparison.length > 0
+                  ? ((stats.projectComparison.reduce((acc, p) => acc + p.spent, 0) || 0) * 100000).toLocaleString('en-IN')
                   : '0'} vs total budget allocations.
               </p>
             </div>
@@ -401,10 +462,48 @@ const Dashboard = () => {
                 Task velocity is healthy. Raft foundations and structural columns are leading current schedules.
               </p>
             </div>
+
+            {/* User Account Provisioning (Builder Only) */}
+            <div className="card" style={{ padding: 16, borderRadius: 12, background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.3)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <UserPlus size={16} style={{ color: 'var(--primary-color)' }} />
+                    Account Provisioning
+                  </span>
+                  <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>Builder Access</span>
+                </div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 6 }}>
+                  Team & Client Accounts
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 14 }}>
+                  Only Builders are authorized to register new user accounts for Engineers, Contractors, Workers, and Clients.
+                </p>
+              </div>
+              <Link
+                to="/register"
+                className="btn btn-primary"
+                style={{ padding: '8px 14px', fontSize: '0.8rem', textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none' }}
+              >
+                <UserPlus size={14} />
+                Create User Account
+              </Link>
+            </div>
           </div>
         </div>
       )}
-      
+
+      {/* Spent Breakdown Modal */}
+      {selectedProjectForSpend && (
+        <SpentBreakdownModal
+          project={selectedProjectForSpend}
+          onClose={() => setSelectedProjectForSpend(null)}
+          onExpenseAdded={() => {
+            setStats(computeDashboardStats());
+          }}
+        />
+      )}
+
       {/* Inject custom spin animation keyframes */}
       <style>{`
         .spin-anim {

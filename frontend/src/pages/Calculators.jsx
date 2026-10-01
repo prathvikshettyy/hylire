@@ -817,12 +817,12 @@ const Calculators = () => {
   return (
     <div className="main-view" style={{ maxWidth: 1400 }}>
       {/* Top Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
         <div>
-          <h1 className="header-title" style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Calculator size={30} color="var(--primary-color)" /> Civil Engineering Estimator Suite
+          <h1 className="header-title" style={{ fontSize: '1.9rem', display: 'flex', alignItems: 'center', gap: 10, margin: 0 }}>
+            <Calculator size={28} color="var(--primary-color)" /> Civil Engineering Estimator Suite
           </h1>
-          <p style={{ color: 'var(--text-muted)' }}>
+          <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '0.88rem' }}>
             Real structural volume calculations, IS standard mix grades, steel bar schedules, and project BOQs
           </p>
         </div>
@@ -830,10 +830,10 @@ const Calculators = () => {
         {/* Project Selector, Site Selector & Print Export */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Project:</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>Project:</span>
             <select 
               className="form-select"
-              style={{ width: 'auto', minWidth: 180 }}
+              style={{ width: 'auto', minWidth: 180, height: 38, padding: '0 12px', fontSize: '0.85rem' }}
               value={projectId}
               onChange={(e) => {
                 setProjectId(e.target.value);
@@ -847,10 +847,10 @@ const Calculators = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Target Site:</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>Target Site:</span>
             <select 
               className="form-select"
-              style={{ width: 'auto', minWidth: 200 }}
+              style={{ width: 'auto', minWidth: 200, height: 38, padding: '0 12px', fontSize: '0.85rem' }}
               value={siteId}
               onChange={(e) => setSiteId(e.target.value)}
             >
@@ -864,7 +864,7 @@ const Calculators = () => {
           <button 
             onClick={handlePrint}
             className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, height: 38, padding: '0 16px', fontSize: '0.85rem' }}
           >
             <Printer size={16} /> Print / Export
           </button>
@@ -1192,29 +1192,29 @@ const Calculators = () => {
                 <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-success)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   4. Surface Plaster & Vitrified Flooring
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                   <div className="form-group">
                     <label className="form-label">Plaster Thickness</label>
                     <select className="form-select" value={aiPlasterThickness} onChange={e => setAiPlasterThickness(e.target.value)}>
-                      <option value="6">6 mm (Ceiling Smooth)</option>
+                      <option value="6">6 mm (Ceiling)</option>
                       <option value="12">12 mm (Internal Brick)</option>
                       <option value="15">15 mm (Rough Masonry)</option>
-                      <option value="20">20 mm (External Double Coat)</option>
+                      <option value="20">20 mm (External Coat)</option>
                     </select>
                   </div>
                   <div className="form-group">
                     <label className="form-label">Plaster Faces / Sides</label>
                     <select className="form-select" value={aiPlasterSides} onChange={e => setAiPlasterSides(e.target.value)}>
-                      <option value="2">Both Sides (2 Faces - Inside & Outside)</option>
-                      <option value="1">Single Side (1 Face - Partition Only)</option>
+                      <option value="2">Both Sides (2 Faces)</option>
+                      <option value="1">Single Side (1 Face)</option>
                     </select>
                   </div>
                   <div className="form-group">
                     <label className="form-label">Vitrified Tile Size</label>
                     <select className="form-select" value={aiTileSize} onChange={e => setAiTileSize(e.target.value)}>
-                      <option value="1x1">1 × 1 Ft (Bath / Utility)</option>
-                      <option value="2x2">2 × 2 Ft (Vitrified Standard)</option>
-                      <option value="2x4">2 × 4 Ft (Large Format GVT)</option>
+                      <option value="1x1">1 × 1 Ft (Bath/Utility)</option>
+                      <option value="2x2">2 × 2 Ft (Vitrified)</option>
+                      <option value="2x4">2 × 4 Ft (Large GVT)</option>
                     </select>
                   </div>
                 </div>
@@ -1239,7 +1239,7 @@ const Calculators = () => {
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                   <div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       Predicted Total Project Budget
@@ -1256,7 +1256,7 @@ const Calculators = () => {
                     onClick={saveAiEstimate}
                     disabled={saveLoading}
                     className="btn btn-primary"
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', height: 42 }}
                   >
                     <BookmarkPlus size={16} /> {saveLoading ? 'Saving...' : 'Save to Project'}
                   </button>
@@ -1299,7 +1299,7 @@ const Calculators = () => {
                   <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>IS Code Formula</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                   {/* Cement Bags */}
                   <div style={{ padding: 12, background: 'var(--bg-subtle)', borderRadius: 10, border: '1px solid var(--border-color)' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1379,15 +1379,17 @@ const Calculators = () => {
                   </div>
 
                   {/* Water */}
-                  <div style={{ padding: 12, background: 'var(--bg-subtle)', borderRadius: 10, border: '1px solid var(--border-color)' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      💧 Water Requirements
+                  <div style={{ gridColumn: 'span 2', padding: 12, background: 'var(--bg-subtle)', borderRadius: 10, border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        💧 Water Requirements
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: 2 }}>
+                        Batching & standard curing
+                      </div>
                     </div>
-                    <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#3b82f6', marginTop: 4 }}>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#3b82f6' }}>
                       {activeAiResult.materials?.water?.liters?.toLocaleString() || 0} <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>Liters</span>
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: 4 }}>
-                      Batching & standard curing
                     </div>
                   </div>
                 </div>
@@ -1421,7 +1423,7 @@ const Calculators = () => {
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <div className="form-group">
                   <label className="form-label">Wall Length (Ft)</label>
                   <input type="number" className="form-input" value={wallLength} onChange={e => setWallLength(e.target.value)} min="1" required />
@@ -1582,8 +1584,8 @@ const Calculators = () => {
                   Member Dimensions (to auto-calculate volume):
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Length (Ft)</label>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Length (Ft)</label>
                     <input 
                       type="number" 
                       className="form-input" 
@@ -1594,8 +1596,8 @@ const Calculators = () => {
                       }} 
                     />
                   </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Width (Ft)</label>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Width (Ft)</label>
                     <input 
                       type="number" 
                       className="form-input" 
@@ -1606,8 +1608,8 @@ const Calculators = () => {
                       }} 
                     />
                   </div>
-                  <div>
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Depth/Thick (In)</label>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Depth/Thick (In)</label>
                     <input 
                       type="number" 
                       className="form-input" 
@@ -1632,21 +1634,21 @@ const Calculators = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="form-group">
-                  <label className="form-label" style={{ fontSize: '0.72rem' }}>Cement (₹/bag)</label>
+                  <label className="form-label">Cement Price (₹/bag)</label>
                   <input type="number" className="form-input" value={cementPrice} onChange={e => setCementPrice(e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label" style={{ fontSize: '0.72rem' }}>Sand (₹/cft)</label>
+                  <label className="form-label">Sand Price (₹/cft)</label>
                   <input type="number" className="form-input" value={sandPrice} onChange={e => setSandPrice(e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label" style={{ fontSize: '0.72rem' }}>Agg (₹/cft)</label>
+                  <label className="form-label">Coarse Aggregate (₹/cft)</label>
                   <input type="number" className="form-input" value={aggregatePrice} onChange={e => setAggregatePrice(e.target.value)} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label" style={{ fontSize: '0.72rem' }}>Steel (₹/kg)</label>
+                  <label className="form-label">Steel Rebar Rate (₹/kg)</label>
                   <input type="number" className="form-input" value={steelPrice} onChange={e => setSteelPrice(e.target.value)} />
                 </div>
               </div>
@@ -1840,6 +1842,15 @@ const Calculators = () => {
                   <strong style={{ color: 'var(--color-success)', fontSize: '1rem' }}>₹{tileResult.totalEstimatedCost?.toLocaleString()}</strong>
                 </div>
               </div>
+
+              <button 
+                type="button" 
+                onClick={saveFinishingEstimate} 
+                className="btn btn-secondary" 
+                disabled={saveLoading}
+              >
+                <BookmarkPlus size={16} /> Save Flooring Package to Project Vault
+              </button>
             </div>
           </div>
         </div>

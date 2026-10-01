@@ -1,15 +1,16 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  FolderKanban, 
-  HardHat, 
-  CheckSquare, 
-  Calculator, 
-  FileText, 
-  MessageSquare, 
-  User, 
-  LogOut 
+import {
+  LayoutDashboard,
+  FolderKanban,
+  HardHat,
+  CheckSquare,
+  Calculator,
+  FileText,
+  MessageSquare,
+  User,
+  UserPlus,
+  LogOut
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
@@ -19,6 +20,8 @@ const Navigation = () => {
 
   if (!user) return null;
 
+  const isBuilder = user.role === 'builder' || user.role === 'admin';
+
   const links = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/projects', label: 'Projects', icon: FolderKanban },
@@ -27,6 +30,7 @@ const Navigation = () => {
     { path: '/calculators', label: 'Estimator tools', icon: Calculator },
     { path: '/documents', label: 'Document Vault', icon: FileText },
     { path: '/chat', label: 'Team Collaboration', icon: MessageSquare },
+    ...(isBuilder ? [{ path: '/register', label: 'Create Account', icon: UserPlus }] : []),
     { path: '/profile', label: 'User Profile', icon: User },
   ];
 
@@ -58,9 +62,9 @@ const Navigation = () => {
         {links.map((link) => {
           const Icon = link.icon;
           return (
-            <NavLink 
-              key={link.path} 
-              to={link.path} 
+            <NavLink
+              key={link.path}
+              to={link.path}
               className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             >
               <Icon size={18} />
