@@ -259,6 +259,17 @@
       "miscCost": 39980,
       "totalEstimatedCost": 571140,
       "createdAt": "2026-10-01T18:03:38.832Z"
+    },
+    {
+      "id": "ce-1790878568919",
+      "projectId": "p-1789872275372",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-10-01T18:16:08.919Z"
     }
   ],
   "documents": [],
