@@ -703,6 +703,23 @@ router.post('/ai-estimate', async (req, res) => {
         }
 
         if (projectId && result && result.primary_cost) {
+            await db.aiEstimations.create({
+                projectId,
+                siteId: siteId || null,
+                primary_cost: result.primary_cost,
+                models: result.models,
+                materials: result.materials,
+                timeline_phases: result.timeline_phases,
+                input_summary: {
+                    built_up_area_sqft: floorArea * numFloors,
+                    num_floors: numFloors,
+                    quality: quality,
+                    concrete_grade: concreteGrade,
+                    steel_percent: steelPercent,
+                    region_multiplier: regionMultiplier
+                }
+            });
+
             await db.costEstimations.create({
                 projectId,
                 siteId: siteId || null,
@@ -710,7 +727,11 @@ router.post('/ai-estimate', async (req, res) => {
                 laborCost: Math.round(result.primary_cost * 0.25),
                 transportCost: Math.round(result.primary_cost * 0.08),
                 miscCost: Math.round(result.primary_cost * 0.07),
-                totalEstimatedCost: result.primary_cost
+                totalEstimatedCost: Math.round(result.primary_cost),
+                qualityTier: quality,
+                totalBuiltUpArea: floorArea * numFloors,
+                models: result.models,
+                isAiEstimate: true
             });
         }
 
@@ -730,12 +751,14 @@ router.get('/project/:projectId', async (req, res) => {
         let bricks = await db.brickEstimations.listByProject(projectId);
         let materials = await db.materials.listByProject(projectId);
         let costs = await db.costEstimations.listByProject(projectId);
+        let aiEstimations = await db.aiEstimations.listByProject(projectId);
         if (siteId) {
             bricks = (bricks || []).filter(b => String(b.site_id || b.siteId) === String(siteId));
             materials = (materials || []).filter(m => String(m.site_id || m.siteId) === String(siteId));
             costs = (costs || []).filter(c => String(c.site_id || c.siteId) === String(siteId));
+            aiEstimations = (aiEstimations || []).filter(a => String(a.site_id || a.siteId) === String(siteId));
         }
-        res.json({ bricks, materials, costs });
+        res.json({ bricks, materials, costs, aiEstimations });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -750,8 +773,11 @@ router.delete('/:type/:id', async (req, res) => {
             success = await db.brickEstimations.delete(id);
         } else if (type === 'material' || type === 'materials') {
             success = await db.materials.delete(id);
-        } else if (type === 'cost' || type === 'costs' || type === 'ai' || type === 'aiEstimations') {
+        } else if (type === 'cost' || type === 'costs') {
             success = await db.costEstimations.delete(id);
+        } else if (type === 'ai' || type === 'aiEstimations') {
+            success = await db.aiEstimations.delete(id);
+            await db.costEstimations.delete(id);
         }
         res.json({ success, message: `${type} estimation deleted` });
     } catch (error) {

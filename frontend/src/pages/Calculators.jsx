@@ -19,14 +19,19 @@ import {
   Shield,
   Download,
   Building,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  Plus
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { localProjects, localSites, localEstimations, syncCollection } from '../utils/localStore';
 
 const Calculators = () => {
   const { token, apiBaseUrl } = useAuth();
-  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('hylire_calc_tab') || 'ai_estimator');
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = sessionStorage.getItem('hylire_calc_tab');
+    return (saved && saved !== 'boq') ? saved : 'ai_estimator';
+  });
   const [projects, setProjects] = useState(() => localProjects.list());
   const [projectId, setProjectId] = useState(() => {
     const list = localProjects.list();
@@ -171,8 +176,11 @@ const Calculators = () => {
   // Sync saved project estimates from API & localStore
   const fetchSavedEstimates = useCallback(async (pId, sId) => {
     if (!pId) return;
+    // 1. Immediately display local saved estimates
     const localE = localEstimations.listByProject(pId, sId);
     setSavedEstimates(localE);
+
+    // 2. Fetch from backend API, merge, and refresh state
     try {
       const q = sId ? `?siteId=${encodeURIComponent(sId)}` : '';
       const res = await fetch(`${apiBaseUrl}/estimation/project/${pId}${q}`, { 
@@ -180,8 +188,9 @@ const Calculators = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data && (data.bricks || data.materials || data.costs)) {
-          setSavedEstimates(data);
+        if (data) {
+          localEstimations.syncFromApi(data);
+          setSavedEstimates(localEstimations.listByProject(pId, sId));
         }
       }
     } catch (e) {}
@@ -813,6 +822,27 @@ const Calculators = () => {
   };
 
   // Delete estimate from history
+  const handleLoadAiEstimate = (estimate) => {
+    if (!estimate) return;
+    if (estimate.input_summary) {
+      const s = estimate.input_summary;
+      if (s.built_up_area_sqft && s.num_floors) {
+        setAiFloorArea(String(Math.round(s.built_up_area_sqft / s.num_floors)));
+        setAiNumFloors(String(s.num_floors));
+      } else if (s.floor_area) {
+        setAiFloorArea(String(s.floor_area));
+        setAiNumFloors(String(s.num_floors || 2));
+      }
+      if (s.quality) setAiQuality(s.quality);
+      if (s.concrete_grade) setAiConcreteGrade(s.concrete_grade);
+      if (s.steel_percent) setAiSteelPercent(String(s.steel_percent));
+      if (s.region_multiplier) setAiRegionMultiplier(Number(s.region_multiplier));
+    }
+    setAiResult(estimate);
+    setActiveTab('ai_estimator');
+    setSaveSuccess(`Loaded estimate (₹${((Number(estimate.primary_cost || 0)) / 100000).toFixed(2)} Lakhs) into AI Estimator!`);
+  };
+
   const handleDeleteEstimate = async (type, id) => {
     if (!window.confirm('Delete this saved calculation from project vault?')) return;
     localEstimations.delete(type, id);
@@ -917,8 +947,7 @@ const Calculators = () => {
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, borderBottom: '1px solid var(--border-color)' }}>
         {[
           { id: 'ai_estimator', label: '🤖 AI Multi-Model Estimator', icon: Sparkles, featured: true },
-          { id: 'boq', label: 'Building BOQ & Cost Modeler', icon: Building },
-          { id: 'vault', label: 'Saved Estimates Vault', icon: FolderClock, badge: (savedEstimates.bricks?.length || 0) + (savedEstimates.materials?.length || 0) + (savedEstimates.costs?.length || 0) + (savedEstimates.aiEstimations?.length || 0) }
+          { id: 'vault', label: 'Saved Estimates Vault', icon: FolderClock, badge: (savedEstimates.aiEstimations?.length || 0) + (savedEstimates.materials?.length || 0) + (savedEstimates.bricks?.length || 0) }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -1411,258 +1440,238 @@ const Calculators = () => {
         </div>
       )}
 
+            {/* ==================================================================== */}
+      {/* SAVED ESTIMATES VAULT */}
       {/* ==================================================================== */}
-      {/* TAB 5: BUILDING BOQ & BUDGET */}
-      {/* ==================================================================== */}
-      {activeTab === 'boq' && (
-        <div className="calc-grid">
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 className="card-title" style={{ margin: 0 }}>
-                <Building size={18} color="var(--primary-color)" /> Project BOQ & Specifications
-              </h3>
-              <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>Benchmark 2026</span>
-            </div>
+      {activeTab === 'vault' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Vault Header Bar */}
+          <div className="card" style={{ padding: '20px 24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <h3 className="card-title" style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <FolderClock size={22} color="var(--primary-color)" /> Project Saved Estimations Vault
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Repository of multi-model predictions, engineering material takeoffs, and project cost projections.
+                </p>
+              </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div className="form-group">
-                  <label className="form-label">Built-up Area per Floor (Sq Ft)</label>
-                  <input type="number" className="form-input" value={builtUpArea} onChange={e => setBuiltUpArea(e.target.value)} min="100" required />
+              {/* Active Project & Site Filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Active Project:</span>
+                  <select 
+                    className="form-select"
+                    style={{ width: 'auto', minWidth: 170, height: 36, padding: '0 10px', fontSize: '0.85rem' }}
+                    value={projectId}
+                    onChange={(e) => {
+                      setProjectId(e.target.value);
+                      setSiteId('');
+                    }}
+                  >
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Number of Floors</label>
-                  <select className="form-select" value={floorsCount} onChange={e => setFloorsCount(e.target.value)}>
-                    <option value="1">Ground Floor Only (G)</option>
-                    <option value="2">G + 1 Floor (Duplex / Villa)</option>
-                    <option value="3">G + 2 Floors (Apartments)</option>
-                    <option value="4">G + 3 Floors (Commercial)</option>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Site:</span>
+                  <select 
+                    className="form-select"
+                    style={{ width: 'auto', minWidth: 170, height: 36, padding: '0 10px', fontSize: '0.85rem' }}
+                    value={siteId}
+                    onChange={(e) => setSiteId(e.target.value)}
+                  >
+                    <option value="">All Sites</option>
+                    {sites.filter(s => !projectId || s.projectId === projectId).map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="form-group">
-                <label className="form-label">Construction Quality Specification Tier</label>
-                <select className="form-select" value={qualityTier} onChange={e => setQualityTier(e.target.value)}>
-                  <option value="economy">Economy Tier (₹1,600 / sqft - Basic materials & standard fixtures)</option>
-                  <option value="standard">Standard Tier (₹2,100 / sqft - Teak wood frame, premium vitrified, branded CP)</option>
-                  <option value="premium">Premium Tier (₹2,850 / sqft - Italian marble, UPVC German windows, home automation)</option>
-                  <option value="luxury">Luxury Tier (₹3,800 / sqft - Designer architectural custom build & luxury facade)</option>
-                </select>
-              </div>
-
+          {/* Section 1: AI Multi-Model Estimations */}
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary-color)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Sparkles size={18} /> AI Multi-Model Estimations ({savedEstimates.aiEstimations?.length || 0})
+              </h4>
               <button 
-                type="button" 
-                onClick={saveBOQEstimate} 
-                className="btn btn-primary" 
-                style={{ marginTop: 8 }} 
-                disabled={saveLoading}
+                onClick={() => setActiveTab('ai_estimator')}
+                className="btn btn-secondary"
+                style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 6 }}
               >
-                <BookmarkPlus size={17} /> Save 10-Phase BOQ to Project Records
+                <Plus size={14} /> New AI Calculation
               </button>
             </div>
+
+            {(!savedEstimates.aiEstimations || savedEstimates.aiEstimations.length === 0) ? (
+              <div style={{ textAlign: 'center', padding: '36px 20px', background: 'var(--bg-subtle)', borderRadius: 14, border: '1px dashed var(--border-color)' }}>
+                <Sparkles size={36} color="var(--text-dim)" style={{ marginBottom: 12, opacity: 0.7 }} />
+                <h5 style={{ margin: '0 0 6px 0', fontSize: '1rem', color: 'var(--text-primary)' }}>No saved AI estimations for this project yet</h5>
+                <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Compute multi-model predictions (XGBoost, Random Forest, Gradient Boosting) in the AI Estimator and click "Archive to Project Vault".
+                </p>
+                <button 
+                  onClick={() => setActiveTab('ai_estimator')}
+                  className="btn btn-primary"
+                  style={{ fontSize: '0.85rem', padding: '8px 18px' }}
+                >
+                  <Sparkles size={16} /> Open AI Estimator
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
+                {savedEstimates.aiEstimations.map((a) => {
+                  const siteObj = sites.find(s => s.id === (a.siteId || a.site_id));
+                  const costLakhs = (Number(a.primary_cost || 0) / 100000).toFixed(2);
+                  const area = a.input_summary?.built_up_area_sqft || 4000;
+                  const quality = a.input_summary?.quality || 'Standard';
+                  const grade = a.input_summary?.concrete_grade || 'M20';
+                  const dateStr = a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent';
+
+                  return (
+                    <div 
+                      key={a.id} 
+                      style={{ 
+                        background: 'var(--bg-subtle)', 
+                        border: '1px solid var(--border-color)', 
+                        borderRadius: 14, 
+                        padding: 18,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: 14,
+                        transition: 'var(--transition-smooth)'
+                      }}
+                    >
+                      <div>
+                        {/* Top info row */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                          <div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: 2 }}>{dateStr}</div>
+                            <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--color-success)' }}>
+                              ₹{costLakhs} Lakhs
+                            </div>
+                          </div>
+                          {siteObj && (
+                            <span className="badge badge-info" style={{ fontSize: '0.72rem' }}>
+                              📍 {siteObj.name}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Specs badges */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                          <span className="badge" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', fontSize: '0.75rem' }}>
+                            {area.toLocaleString()} sq ft
+                          </span>
+                          <span className="badge" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', fontSize: '0.75rem' }}>
+                            {quality} Tier
+                          </span>
+                          <span className="badge" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', fontSize: '0.75rem' }}>
+                            Grade {grade}
+                          </span>
+                        </div>
+
+                        {/* ML Models mini pill row */}
+                        {a.models && (
+                          <div style={{ background: 'var(--bg-card)', borderRadius: 10, padding: '8px 12px', border: '1px solid var(--border-color)', fontSize: '0.75rem' }}>
+                            <div style={{ color: 'var(--text-dim)', marginBottom: 4, fontWeight: 600 }}>Multi-Model Predictions:</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
+                              <span>XGB: <strong style={{ color: 'var(--text-primary)' }}>₹{((a.models.xgboost?.predicted_cost || a.primary_cost) / 100000).toFixed(1)}L</strong></span>
+                              <span>RF: <strong style={{ color: 'var(--text-primary)' }}>₹{((a.models.random_forest?.predicted_cost || a.primary_cost) / 100000).toFixed(1)}L</strong></span>
+                              <span>GB: <strong style={{ color: 'var(--text-primary)' }}>₹{((a.models.gradient_boosting?.predicted_cost || a.primary_cost) / 100000).toFixed(1)}L</strong></span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action buttons */}
+                      <div style={{ display: 'flex', gap: 8, paddingTop: 10, borderTop: '1px solid var(--border-color)' }}>
+                        <button
+                          onClick={() => handleLoadAiEstimate(a)}
+                          className="btn btn-primary"
+                          style={{ flex: 1, padding: '8px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                        >
+                          <Eye size={14} /> Load into Estimator
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEstimate('ai', a.id)}
+                          className="btn btn-secondary"
+                          style={{ padding: '8px 12px', borderRadius: 8, color: 'var(--color-error)' }}
+                          title="Delete estimation record"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* BOQ Results Card */}
-          <div className="card calc-results-sticky" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-            <h3 className="card-title" style={{ color: 'var(--color-success)' }}>
-              <IndianRupee size={18} /> Phase-wise Bill of Quantities (BOQ)
-            </h3>
+          {/* Section 2: Materials & Structural Items */}
+          {((savedEstimates.bricks && savedEstimates.bricks.length > 0) || (savedEstimates.materials && savedEstimates.materials.length > 0)) && (
+            <div className="card">
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--accent-color)', margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Layers size={18} /> Structural Materials & Engineering Takeoffs
+              </h4>
 
-            <div style={{ padding: 16, background: 'var(--color-success-bg)', borderRadius: 12, border: '1px solid rgba(16, 185, 129, 0.25)', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Total Built-up Area: {costResult.totalBuiltUpArea?.toLocaleString()} sq ft</div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-success)', marginTop: 2 }}>
-                  ₹{(costResult.totalEstimatedBudget / 100000).toFixed(2)} Lakhs
-                </div>
-              </div>
-              <div style={{ textAlign: 'right', fontSize: '0.85rem' }}>
-                <div style={{ color: 'var(--text-muted)' }}>Rate per Sq Ft</div>
-                <strong style={{ color: 'var(--primary-color)' }}>₹{costResult.ratePerSqFt} / sqft</strong>
-              </div>
-            </div>
-
-            {/* 10 Phases List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 380, overflowY: 'auto', paddingRight: 4 }}>
-              {costResult.phases.map((p, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--bg-subtle)', borderRadius: 8, fontSize: '0.85rem' }}>
-                  <div>
-                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.phase}</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginLeft: 8 }}>({p.percent}%)</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
+                {/* Brickwork Items */}
+                {(savedEstimates.bricks || []).map(b => (
+                  <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--bg-subtle)', border: '1px solid var(--border-color)', borderRadius: 10, fontSize: '0.85rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <BrickWall size={15} color="var(--primary-color)" />
+                        <span>{b.bricksNeeded?.toLocaleString()} bricks</span>
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--color-success)', fontWeight: 600, marginTop: 2 }}>
+                        ₹{Number(b.totalEstimatedCost || b.totalCost || 0).toLocaleString()}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteEstimate('brick', b.id)}
+                      className="btn-secondary"
+                      style={{ padding: 6, borderRadius: 8, color: 'var(--color-error)' }}
+                      title="Delete item"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
-                  <strong style={{ color: 'var(--text-primary)' }}>₹{Math.round(p.cost).toLocaleString()}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+                ))}
 
-      {/* ==================================================================== */}
-      {/* TAB 6: SAVED ESTIMATES VAULT */}
-      {/* ==================================================================== */}
-      {activeTab === 'vault' && (
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-            <h3 className="card-title" style={{ margin: 0 }}>
-              <FolderClock size={18} color="var(--primary-color)" /> Project Saved Estimations Vault
-            </h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              <span>Project: <strong style={{ color: 'var(--text-primary)' }}>{projects.find(p => p.id === projectId)?.name || 'Selected Project'}</strong></span>
-              {siteId && (
-                <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
-                  📍 Site: {sites.find(s => s.id === siteId)?.name || siteId}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18 }}>
-            {/* Bricks Vault */}
-            <div style={{ padding: 18, background: 'var(--bg-subtle)', border: '1px solid var(--border-color)', borderRadius: 14 }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--primary-color)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <BrickWall size={16} /> Saved Brickwork Estimates ({savedEstimates.bricks?.length || 0})
-              </h4>
-              {savedEstimates.bricks?.length === 0 ? (
-                <div style={{ fontSize: '0.825rem', color: 'var(--text-dim)', padding: 18, textAlign: 'center' }}>No saved brick calculations for this project yet.</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {savedEstimates.bricks.map((b) => {
-                    const siteObj = sites.find(s => s.id === (b.siteId || b.site_id));
-                    return (
-                      <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 10, fontSize: '0.85rem' }}>
-                        <div>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <span>{b.bricksNeeded?.toLocaleString()} bricks ({b.wallVolumeCuFt || b.thickness || 0} cft)</span>
-                            {siteObj && <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>📍 {siteObj.name}</span>}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 600, marginTop: 2 }}>₹{b.totalEstimatedCost?.toLocaleString() || b.totalCost?.toLocaleString()}</div>
-                        </div>
-                        <button 
-                          onClick={() => handleDeleteEstimate('brick', b.id)} 
-                          className="btn-secondary" 
-                          style={{ padding: 7, borderRadius: 8, color: 'var(--color-error)' }}
-                          title="Delete calculation"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                {/* Concrete & Materials Items */}
+                {(savedEstimates.materials || []).map(m => (
+                  <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--bg-subtle)', border: '1px solid var(--border-color)', borderRadius: 10, fontSize: '0.85rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Layers size={15} color="var(--accent-color)" />
+                        <span>{m.name}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Materials Vault */}
-            <div style={{ padding: 18, background: 'var(--bg-subtle)', border: '1px solid var(--border-color)', borderRadius: 14 }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--accent-color)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Layers size={16} /> Saved Concrete & Steel Items ({savedEstimates.materials?.length || 0})
-              </h4>
-              {savedEstimates.materials?.length === 0 ? (
-                <div style={{ fontSize: '0.825rem', color: 'var(--text-dim)', padding: 18, textAlign: 'center' }}>No saved concrete records for this project yet.</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {savedEstimates.materials.map((m) => {
-                    const siteObj = sites.find(s => s.id === (m.siteId || m.site_id));
-                    return (
-                      <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 10, fontSize: '0.85rem' }}>
-                        <div>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <span>{m.name}</span>
-                            {siteObj && <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>📍 {siteObj.name}</span>}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: 2 }}>{m.quantity} {m.unit} • <strong style={{ color: 'var(--color-success)' }}>₹{m.totalCost?.toLocaleString()}</strong></div>
-                        </div>
-                        <button 
-                          onClick={() => handleDeleteEstimate('material', m.id)} 
-                          className="btn-secondary" 
-                          style={{ padding: 7, borderRadius: 8, color: 'var(--color-error)' }}
-                          title="Delete material"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: 2 }}>
+                        {m.quantity} {m.unit} • <strong style={{ color: 'var(--color-success)' }}>₹{Number(m.totalCost || 0).toLocaleString()}</strong>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    </div>
+                    <button 
+                      onClick={() => handleDeleteEstimate('material', m.id)}
+                      className="btn-secondary"
+                      style={{ padding: 6, borderRadius: 8, color: 'var(--color-error)' }}
+                      title="Delete item"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-
-            {/* Costs Vault */}
-            <div style={{ padding: 18, background: 'var(--bg-subtle)', border: '1px solid var(--border-color)', borderRadius: 14 }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-success)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <IndianRupee size={16} /> Saved BOQ Budgets ({savedEstimates.costs?.length || 0})
-              </h4>
-              {savedEstimates.costs?.length === 0 ? (
-                <div style={{ fontSize: '0.825rem', color: 'var(--text-dim)', padding: 18, textAlign: 'center' }}>No saved BOQ records for this project yet.</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {savedEstimates.costs.map((c) => {
-                    const siteObj = sites.find(s => s.id === (c.siteId || c.site_id));
-                    return (
-                      <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 10, fontSize: '0.85rem' }}>
-                        <div>
-                          <div style={{ fontWeight: 700, color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <span>₹{(Number(c.totalEstimatedCost || 0) / 100000).toFixed(2)} Lakhs</span>
-                            {siteObj && <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>📍 {siteObj.name}</span>}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: 2 }}>{c.totalBuiltUpArea || 1800} sq ft • {c.qualityTier || 'Standard'}</div>
-                        </div>
-                        <button 
-                          onClick={() => handleDeleteEstimate('cost', c.id)} 
-                          className="btn-secondary" 
-                          style={{ padding: 7, borderRadius: 8, color: 'var(--color-error)' }}
-                          title="Delete BOQ"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* AI Estimations Vault */}
-            <div style={{ padding: 18, background: 'var(--bg-subtle)', border: '1px solid var(--border-color)', borderRadius: 14 }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--primary-color)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Sparkles size={16} /> Saved AI Multi-Model Estimations ({savedEstimates.aiEstimations?.length || 0})
-              </h4>
-              {savedEstimates.aiEstimations?.length === 0 ? (
-                <div style={{ fontSize: '0.825rem', color: 'var(--text-dim)', padding: 18, textAlign: 'center' }}>No saved AI estimations for this project yet.</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {savedEstimates.aiEstimations.map((a) => {
-                    const siteObj = sites.find(s => s.id === (a.siteId || a.site_id));
-                    return (
-                      <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 10, fontSize: '0.85rem' }}>
-                        <div>
-                          <div style={{ fontWeight: 700, color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                            <span>₹{((Number(a.primary_cost || 0)) / 100000).toFixed(2)} Lakhs</span>
-                            {siteObj && <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>📍 {siteObj.name}</span>}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: 2 }}>
-                            {a.input_summary?.built_up_area_sqft || 4000} sq ft • {a.input_summary?.quality || 'Standard'} • {a.input_summary?.concrete_grade || 'M20'}
-                          </div>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--color-success)', marginTop: 2 }}>
-                            XGBoost: ₹{((a.models?.xgboost?.predicted_cost || a.primary_cost || 0) / 100000).toFixed(2)}L
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => handleDeleteEstimate('ai', a.id)} 
-                          className="btn-secondary" 
-                          style={{ padding: 7, borderRadius: 8, color: 'var(--color-error)' }}
-                          title="Delete AI estimate"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>

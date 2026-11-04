@@ -242,8 +242,126 @@
       "miscCost": 589176,
       "totalEstimatedCost": 8416800,
       "createdAt": "2026-10-01T18:16:08.919Z"
+    },
+    {
+      "id": "ce-1793822763180",
+      "projectId": "p-1793822033977",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-11-04T20:06:03.180Z"
+    },
+    {
+      "id": "ce-1793822772193",
+      "projectId": "p-1793822033977",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-11-04T20:06:12.193Z"
+    },
+    {
+      "id": "ce-1793822773072",
+      "projectId": "p-1793822033977",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-11-04T20:06:13.072Z"
+    },
+    {
+      "id": "ce-1793822773686",
+      "projectId": "p-1793822033977",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-11-04T20:06:13.686Z"
+    },
+    {
+      "id": "ce-1793822779650",
+      "projectId": "p-1793822033977",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-11-04T20:06:19.650Z"
+    },
+    {
+      "id": "ce-1793822781413",
+      "projectId": "p-1793822033977",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-11-04T20:06:21.413Z"
+    },
+    {
+      "id": "ce-1793822782685",
+      "projectId": "p-1793822033977",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "createdAt": "2026-11-04T20:06:22.685Z"
+    },
+    {
+      "id": "ce-1793823019338",
+      "projectId": "p-1789872275380",
+      "siteId": null,
+      "materialCost": 5050080,
+      "laborCost": 2104200,
+      "transportCost": 673344,
+      "miscCost": 589176,
+      "totalEstimatedCost": 8416800,
+      "qualityTier": "Standard",
+      "totalBuiltUpArea": 4000,
+      "models": {
+        "xgboost": {
+          "name": "XGBoost Regressor (Champion Model)",
+          "predicted_cost": 8416800,
+          "r2_score": 0.9946,
+          "mae": 630110,
+          "mape": "3.07%",
+          "status": "Optimal Best Fit"
+        },
+        "random_forest": {
+          "name": "Random Forest Regressor (300 Trees)",
+          "predicted_cost": 8383200,
+          "r2_score": 0.9927,
+          "mae": 694805,
+          "mape": "3.49%",
+          "status": "Robust Ensemble"
+        },
+        "gradient_boosting": {
+          "name": "Gradient Boosting Regressor (300 Estimators)",
+          "predicted_cost": 8433600,
+          "r2_score": 0.9951,
+          "mae": 693658,
+          "mape": "4.34%",
+          "status": "High Precision"
+        }
+      },
+      "isAiEstimate": true,
+      "createdAt": "2026-11-04T20:10:19.338Z"
     }
   ],
+  "aiEstimations": [],
   "documents": [
     {
       "id": "d-1793820025087",
@@ -255,6 +373,17 @@
       "category": "Blueprints",
       "uploadedBy": "John Builder",
       "createdAt": "2026-11-04T19:20:25.087Z"
+    },
+    {
+      "id": "d-1793823098631",
+      "projectId": "p-1793822033977",
+      "name": "25CSE202 Object Oriented Programming – Mid-Sem II Answer Key (1).pdf",
+      "fileUrl": "http://localhost:5000/uploads/documents/1793823098627_25CSE202_Object_Oriented_Programming___Mid-Sem_II_Answer_Key__1_.pdf",
+      "fileType": "application/pdf",
+      "fileSize": "196.87 KB",
+      "category": "Blueprints",
+      "uploadedBy": "John Builder",
+      "createdAt": "2026-11-04T20:11:38.631Z"
     }
   ],
   "chatMessages": []

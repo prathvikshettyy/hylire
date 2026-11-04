@@ -48,12 +48,14 @@ app.get('/api/projects/:projectId/estimations', async (req, res) => {
         let bricks = await db.brickEstimations.listByProject(req.params.projectId);
         let materials = await db.materials.listByProject(req.params.projectId);
         let costs = await db.costEstimations.listByProject(req.params.projectId);
+        let aiEstimations = await db.aiEstimations.listByProject(req.params.projectId);
         if (siteId) {
             bricks = (bricks || []).filter(b => String(b.site_id || b.siteId) === String(siteId));
             materials = (materials || []).filter(m => String(m.site_id || m.siteId) === String(siteId));
             costs = (costs || []).filter(c => String(c.site_id || c.siteId) === String(siteId));
+            aiEstimations = (aiEstimations || []).filter(a => String(a.site_id || a.siteId) === String(siteId));
         }
-        res.json({ bricks, materials, costs });
+        res.json({ bricks, materials, costs, aiEstimations });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

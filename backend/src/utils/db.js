@@ -37,6 +37,7 @@ const defaultStore = {
     materials: [],
     brickEstimations: [],
     costEstimations: [],
+    aiEstimations: [],
     documents: [],
     chatMessages: []
 };
@@ -55,6 +56,7 @@ function loadStore() {
                 materials: Array.isArray(data.materials) ? data.materials : [],
                 brickEstimations: Array.isArray(data.brickEstimations) ? data.brickEstimations : [],
                 costEstimations: Array.isArray(data.costEstimations) ? data.costEstimations : [],
+                aiEstimations: Array.isArray(data.aiEstimations) ? data.aiEstimations : [],
                 documents: Array.isArray(data.documents) ? data.documents : [],
                 chatMessages: Array.isArray(data.chatMessages) ? data.chatMessages : []
             };
@@ -260,6 +262,7 @@ const db = {
             store.materials = (store.materials || []).filter(m => m.projectId !== id);
             store.brickEstimations = (store.brickEstimations || []).filter(b => b.projectId !== id);
             store.costEstimations = (store.costEstimations || []).filter(c => c.projectId !== id);
+            store.aiEstimations = (store.aiEstimations || []).filter(a => a.projectId !== id);
             store.documents = (store.documents || []).filter(d => d.projectId !== id);
             store.chatMessages = (store.chatMessages || []).filter(msg => msg.projectId !== id);
             saveStore(store);
@@ -523,6 +526,31 @@ const db = {
             const idx = store.costEstimations.findIndex(ce => ce.id === id);
             if (idx === -1) return false;
             store.costEstimations.splice(idx, 1);
+            saveStore(store);
+            return true;
+        }
+    },
+
+    // AI Multi-Model Estimations
+    aiEstimations: {
+        async listByProject(projectId) {
+            const store = getStore();
+            return (store.aiEstimations || []).filter(ae => ae.projectId === projectId);
+        },
+        async create(estimation) {
+            const newAi = { id: estimation.id || `ai-${Date.now()}`, ...estimation, createdAt: estimation.createdAt || new Date().toISOString() };
+            const store = getStore();
+            if (!store.aiEstimations) store.aiEstimations = [];
+            store.aiEstimations.unshift(newAi);
+            saveStore(store);
+            return newAi;
+        },
+        async delete(id) {
+            const store = getStore();
+            if (!store.aiEstimations) store.aiEstimations = [];
+            const idx = store.aiEstimations.findIndex(ae => ae.id === id);
+            if (idx === -1) return false;
+            store.aiEstimations.splice(idx, 1);
             saveStore(store);
             return true;
         }
