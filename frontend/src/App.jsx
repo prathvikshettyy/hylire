@@ -17,7 +17,7 @@ import Documents from './pages/Documents';
 import TeamChat from './pages/TeamChat';
 import UserProfile from './pages/UserProfile';
 
-// Private Route Wrapper with optional role-based access control
+// Private Route Wrapper with role-based access control
 const PrivateRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
@@ -33,11 +33,30 @@ const PrivateRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // If worker tries to access a restricted route, redirect to /tasks
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={user.role === 'worker' ? "/tasks" : "/"} replace />;
   }
 
   return children;
+};
+
+// Root Dashboard route dispatcher (Workers don't access dashboard, redirect to /tasks)
+const DashboardRoute = () => {
+  const { user } = useAuth();
+  if (user?.role === 'worker') {
+    return <Navigate to="/tasks" replace />;
+  }
+  return <Dashboard />;
+};
+
+// Global fallback route dispatcher
+const FallbackRoute = () => {
+  const { user } = useAuth();
+  if (user?.role === 'worker') {
+    return <Navigate to="/tasks" replace />;
+  }
+  return <Navigate to="/" replace />;
 };
 
 // Main Layout Wrapper for Authenticated Users
@@ -111,27 +130,30 @@ const App = () => {
             <Route path="/" element={
               <PrivateRoute>
                 <AppLayout>
-                  <Dashboard />
+                  <DashboardRoute />
                 </AppLayout>
               </PrivateRoute>
             } />
 
+            {/* Projects - Not accessible to worker role */}
             <Route path="/projects" element={
-              <PrivateRoute>
+              <PrivateRoute allowedRoles={['builder', 'admin', 'engineer', 'contractor', 'client']}>
                 <AppLayout>
                   <Projects />
                 </AppLayout>
               </PrivateRoute>
             } />
 
+            {/* Construction Sites - Not accessible to worker role */}
             <Route path="/sites" element={
-              <PrivateRoute>
+              <PrivateRoute allowedRoles={['builder', 'admin', 'engineer', 'contractor', 'client']}>
                 <AppLayout>
                   <Sites />
                 </AppLayout>
               </PrivateRoute>
             } />
 
+            {/* Tasks - Primary operational workbench for workers */}
             <Route path="/tasks" element={
               <PrivateRoute>
                 <AppLayout>
@@ -173,7 +195,7 @@ const App = () => {
             } />
 
             {/* Fallback Redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<FallbackRoute />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

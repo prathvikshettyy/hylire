@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('hylire_token', data.token);
         sessionStorage.setItem('hylire_user', JSON.stringify(data.user));
         sessionStorage.setItem('hylire_token', data.token);
-        return { success: true };
+        return { success: true, user: data.user };
       } else {
         const errData = await response.json();
         throw new Error(errData.error || 'Invalid credentials');
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('hylire_token', mockToken);
         sessionStorage.setItem('hylire_user', JSON.stringify(matchedMockUser));
         sessionStorage.setItem('hylire_token', mockToken);
-        return { success: true };
+        return { success: true, user: matchedMockUser };
       } else {
         return { success: false, error: 'Invalid credentials. Hint: use password123 with any email like engineer@hylire.com' };
       }

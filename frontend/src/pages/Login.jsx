@@ -27,7 +27,12 @@ const Login = () => {
     setLoading(false);
 
     if (result.success) {
-      navigate('/');
+      const activeRole = result.user?.role || JSON.parse(localStorage.getItem('hylire_user') || '{}')?.role;
+      if (activeRole === 'worker') {
+        navigate('/tasks');
+      } else {
+        navigate('/');
+      }
     } else {
       setError(result.error || 'Login failed. Please check credentials.');
     }

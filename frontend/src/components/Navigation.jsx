@@ -21,11 +21,14 @@ const Navigation = () => {
   if (!user) return null;
 
   const isBuilder = user.role === 'builder' || user.role === 'admin';
+  const isWorker = user.role === 'worker';
 
   const links = [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/projects', label: 'Projects', icon: FolderKanban },
-    { path: '/sites', label: 'Construction Sites', icon: HardHat },
+    ...(!isWorker ? [
+      { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/projects', label: 'Projects', icon: FolderKanban },
+      { path: '/sites', label: 'Construction Sites', icon: HardHat },
+    ] : []),
     { path: '/tasks', label: 'Tasks', icon: CheckSquare },
     { path: '/calculators', label: 'Estimator tools', icon: Calculator },
     { path: '/documents', label: 'Document Vault', icon: FileText },
