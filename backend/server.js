@@ -30,6 +30,45 @@ app.use('/api/estimation', estimationsRouter);
 app.use('/api/documents', documentsRouter);
 app.use('/api/chat', chatRouter);
 
+// Real-Time Project Updates API
+app.get('/api/updates', async (req, res) => {
+    try {
+        const { projectId } = req.query;
+        const list = await db.projectUpdates.list(projectId ? { projectId } : {});
+        res.json(list);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/updates', async (req, res) => {
+    try {
+        const { message, senderName, role, projectId, projectName, category, accentColor } = req.body;
+        if (!message) return res.status(400).json({ error: 'Message content is required' });
+        const newUpd = await db.projectUpdates.create({
+            message,
+            senderName: senderName || 'User',
+            role: role || 'builder',
+            projectId: projectId || null,
+            projectName: projectName || 'General',
+            category: category || 'Site Milestone',
+            accentColor: accentColor || 'var(--accent-color)'
+        });
+        res.status(201).json(newUpd);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/updates/:id', async (req, res) => {
+    try {
+        const success = await db.projectUpdates.delete(req.params.id);
+        res.json({ success, message: 'Update removed' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/health', (req, res) => res.json({ status: 'healthy', uptime: process.uptime() }));
 
 // Alias Routes matching exact spec requirements

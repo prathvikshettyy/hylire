@@ -386,5 +386,29 @@
       "createdAt": "2026-11-04T20:11:38.631Z"
     }
   ],
-  "chatMessages": []
+  "chatMessages": [],
+  "projectUpdates": [
+    {
+      "id": "upd-2",
+      "senderName": "System Logger",
+      "role": "system",
+      "projectId": "p-1789872275380",
+      "projectName": "Alva's",
+      "message": "Brick estimation for project generated and saved to project vault.",
+      "category": "Estimation",
+      "accentColor": "var(--primary-color)",
+      "createdAt": "2026-11-04T18:27:12.639Z"
+    },
+    {
+      "id": "upd-3",
+      "senderName": "Mark Contractor",
+      "role": "contractor",
+      "projectId": "p-1789872275380",
+      "projectName": "Alva's",
+      "message": "Tower Crane #2 safety check certified by chief inspector.",
+      "category": "Safety Check",
+      "accentColor": "var(--color-success)",
+      "createdAt": "2026-11-03T20:27:12.639Z"
+    }
+  ]
 }

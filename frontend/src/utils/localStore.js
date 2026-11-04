@@ -227,6 +227,41 @@ const DEFAULT_INITIAL_STATE = {
   ],
   aiEstimations: [],
   documents: [],
+    projectUpdates: [
+    {
+      id: "upd-1",
+      senderName: "Sarah Engineer",
+      role: "engineer",
+      projectId: "p-1789872275380",
+      projectName: "Alva's",
+      message: "Soil compaction testing at Apex Site A passed. Concrete base pour is cleared to start.",
+      category: "Site Milestone",
+      accentColor: "var(--accent-color)",
+      createdAt: new Date(Date.now() - 3 * 60 * 1000).toISOString()
+    },
+    {
+      id: "upd-2",
+      senderName: "System Logger",
+      role: "system",
+      projectId: "p-1789872275380",
+      projectName: "Alva's",
+      message: "Brick estimation for project generated and saved to project vault.",
+      category: "Estimation",
+      accentColor: "var(--primary-color)",
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      id: "upd-3",
+      senderName: "Mark Contractor",
+      role: "contractor",
+      projectId: "p-1789872275380",
+      projectName: "Alva's",
+      message: "Tower Crane #2 safety check certified by chief inspector.",
+      category: "Safety Check",
+      accentColor: "var(--color-success)",
+      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    }
+  ],
   chatMessages: []
 };
 
@@ -271,7 +306,8 @@ export const getLocalStore = () => {
       expenses: Array.isArray(parsed.expenses) ? parsed.expenses : (DEFAULT_INITIAL_STATE.expenses || []),
       aiEstimations: Array.isArray(parsed.aiEstimations) ? parsed.aiEstimations : [],
       documents: Array.isArray(parsed.documents) ? parsed.documents : [],
-      chatMessages: Array.isArray(parsed.chatMessages) ? parsed.chatMessages : []
+      chatMessages: Array.isArray(parsed.chatMessages) ? parsed.chatMessages : [],
+      projectUpdates: Array.isArray(parsed.projectUpdates) && parsed.projectUpdates.length > 0 ? parsed.projectUpdates : DEFAULT_INITIAL_STATE.projectUpdates
     };
   } catch (err) {
     console.error('Error reading localStorage store:', err);
@@ -285,6 +321,43 @@ export const saveLocalStore = (store) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   } catch (err) {
     console.error('Error saving to localStorage:', err);
+  }
+};
+
+// Real-Time Project Updates
+export const localUpdates = {
+  list(projectId) {
+    const store = getLocalStore();
+    let list = Array.isArray(store.projectUpdates) && store.projectUpdates.length > 0 ? store.projectUpdates : DEFAULT_INITIAL_STATE.projectUpdates;
+    if (projectId) list = list.filter(u => u.projectId === projectId);
+    return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  },
+  create(update) {
+    const store = getLocalStore();
+    if (!Array.isArray(store.projectUpdates) || store.projectUpdates.length === 0) {
+      store.projectUpdates = [...DEFAULT_INITIAL_STATE.projectUpdates];
+    }
+    const newUpd = {
+      id: update.id || `upd-${Date.now()}`,
+      senderName: update.senderName || 'Anonymous',
+      role: update.role || 'builder',
+      projectId: update.projectId || null,
+      projectName: update.projectName || 'General',
+      message: update.message || update.messageText || '',
+      category: update.category || 'Site Milestone',
+      accentColor: update.accentColor || 'var(--accent-color)',
+      createdAt: update.createdAt || new Date().toISOString()
+    };
+    store.projectUpdates = [newUpd, ...store.projectUpdates];
+    saveLocalStore(store);
+    return newUpd;
+  },
+  delete(id) {
+    const store = getLocalStore();
+    if (!store.projectUpdates) return true;
+    store.projectUpdates = store.projectUpdates.filter(u => u.id !== id);
+    saveLocalStore(store);
+    return true;
   }
 };
 

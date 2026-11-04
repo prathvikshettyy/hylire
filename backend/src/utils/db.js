@@ -39,7 +39,8 @@ const defaultStore = {
     costEstimations: [],
     aiEstimations: [],
     documents: [],
-    chatMessages: []
+    chatMessages: [],
+    projectUpdates: []
 };
 
 // Load store from persistent JSON file on disk
@@ -58,7 +59,8 @@ function loadStore() {
                 costEstimations: Array.isArray(data.costEstimations) ? data.costEstimations : [],
                 aiEstimations: Array.isArray(data.aiEstimations) ? data.aiEstimations : [],
                 documents: Array.isArray(data.documents) ? data.documents : [],
-                chatMessages: Array.isArray(data.chatMessages) ? data.chatMessages : []
+                chatMessages: Array.isArray(data.chatMessages) ? data.chatMessages : [],
+                projectUpdates: Array.isArray(data.projectUpdates) && data.projectUpdates.length > 0 ? data.projectUpdates : defaultStore.projectUpdates
             };
         }
     } catch (err) {
@@ -619,7 +621,7 @@ const db = {
                 if (data) return data;
             }
             const store = getStore();
-            return store.chatMessages.filter(msg => msg.projectId === projectId);
+            return (store.chatMessages || []).filter(msg => msg.projectId === projectId);
         },
         async create(message) {
             const newMsg = { id: `msg-${Date.now()}`, ...message, createdAt: new Date().toISOString() };
@@ -634,9 +636,43 @@ const db = {
                 newMsg.id = data.id;
             }
             const store = getStore();
+            if (!store.chatMessages) store.chatMessages = [];
             store.chatMessages.push(newMsg);
             saveStore(store);
             return newMsg;
+        }
+    },
+
+    // Real-Time Project Updates & Announcements
+    projectUpdates: {
+        async list(filters = {}) {
+            const store = getStore();
+            let res = Array.isArray(store.projectUpdates) ? store.projectUpdates : [];
+            if (filters.projectId) {
+                res = res.filter(u => u.projectId === filters.projectId);
+            }
+            return res.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        },
+        async create(update) {
+            const newUpd = {
+                id: update.id || `upd-${Date.now()}`,
+                ...update,
+                createdAt: update.createdAt || new Date().toISOString()
+            };
+            const store = getStore();
+            if (!store.projectUpdates) store.projectUpdates = [];
+            store.projectUpdates.unshift(newUpd);
+            saveStore(store);
+            return newUpd;
+        },
+        async delete(id) {
+            const store = getStore();
+            if (!store.projectUpdates) return true;
+            const idx = store.projectUpdates.findIndex(u => u.id === id);
+            if (idx === -1) return false;
+            store.projectUpdates.splice(idx, 1);
+            saveStore(store);
+            return true;
         }
     }
 };

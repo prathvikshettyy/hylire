@@ -11,10 +11,13 @@ import {
   TrendingUp,
   PieChart,
   UserPlus,
-  Receipt
+  Receipt,
+  Plus,
+  Send,
+  Trash2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { computeDashboardStats, syncCollection } from '../utils/localStore';
+import { computeDashboardStats, syncCollection, localUpdates, localProjects } from '../utils/localStore';
 import SpentBreakdownModal from '../components/SpentBreakdownModal';
 
 const Dashboard = () => {
@@ -23,6 +26,99 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [activeHoverPoint, setActiveHoverPoint] = useState(null);
   const [selectedProjectForSpend, setSelectedProjectForSpend] = useState(null);
+
+  // Real-Time Project Updates States
+  const [updates, setUpdates] = useState(() => localUpdates.list());
+  const [projectsList, setProjectsList] = useState(() => localProjects.list());
+  const [showAddUpdate, setShowAddUpdate] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState('');
+  const [updateCategory, setUpdateCategory] = useState('Site Milestone');
+  const [updateProjectId, setUpdateProjectId] = useState('');
+
+  const fetchUpdates = async () => {
+    setUpdates(localUpdates.list());
+    setProjectsList(localProjects.list());
+    try {
+      const res = await fetch(`${apiBaseUrl}/updates`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const synced = syncCollection('projectUpdates', data);
+          setUpdates(synced);
+        }
+      }
+    } catch (err) {}
+  };
+
+  const handleCreateUpdate = async (e) => {
+    e.preventDefault();
+    if (!updateMessage.trim()) return;
+
+    const selectedProj = projectsList.find(p => p.id === updateProjectId);
+    const categoryColors = {
+      'Site Milestone': 'var(--accent-color)',
+      'Safety Check': 'var(--color-success)',
+      'Estimation': 'var(--primary-color)',
+      'Quality Inspection': '#f59e0b',
+      'Material Delivery': '#06b6d4',
+      'Workforce Notice': '#ec4899'
+    };
+
+    const payload = {
+      senderName: user?.fullName || 'John Builder',
+      role: user?.role || 'builder',
+      projectId: updateProjectId || null,
+      projectName: selectedProj ? selectedProj.name : (projectsList.length > 0 ? projectsList[0].name : 'General'),
+      message: updateMessage.trim(),
+      category: updateCategory,
+      accentColor: categoryColors[updateCategory] || 'var(--accent-color)'
+    };
+
+    const newUpd = localUpdates.create(payload);
+    setUpdates(localUpdates.list());
+    setUpdateMessage('');
+    setShowAddUpdate(false);
+
+    try {
+      await fetch(`${apiBaseUrl}/updates`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ ...payload, id: newUpd.id })
+      });
+    } catch (err) {}
+  };
+
+  const handleDeleteUpdate = async (id) => {
+    localUpdates.delete(id);
+    setUpdates(localUpdates.list());
+    try {
+      await fetch(`${apiBaseUrl}/updates/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (err) {}
+  };
+
+  const formatTimeAgo = (isoString) => {
+    if (!isoString) return 'Just Now';
+    const now = new Date();
+    const past = new Date(isoString);
+    const diffSec = Math.floor((now - past) / 1000);
+    if (diffSec < 60) return 'Just Now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return past.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  };
 
   const fetchStats = async () => {
     // 1. Sync projects with API first if reachable
@@ -65,6 +161,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchStats();
+    fetchUpdates();
   }, [token]);
 
   const taskPercentage = stats.totalTasks > 0
@@ -394,31 +491,145 @@ const Dashboard = () => {
 
         {/* Real-time Announcements & Updates */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-          <h2 className="card-title"><AlertCircle size={18} /> Real-Time Project Updates</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', flex: 1, marginTop: 12 }}>
-            <div style={{ padding: 12, background: 'var(--bg-subtle)', borderLeft: '3px solid var(--accent-color)', borderRadius: '0 8px 8px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: 4 }}>
-                <span>Sarah Engineer</span>
-                <span>Just Now</span>
-              </div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Soil compaction testing at Apex Site A passed. Concrete base pour is cleared to start.</p>
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 className="card-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <AlertCircle size={18} color="var(--primary-color)" /> Real-Time Project Updates
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowAddUpdate(!showAddUpdate)}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.78rem', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6, borderRadius: 8 }}
+            >
+              <Plus size={14} /> {showAddUpdate ? 'Close' : 'Post Update'}
+            </button>
+          </div>
 
-            <div style={{ padding: 12, background: 'var(--bg-subtle)', borderLeft: '3px solid var(--primary-color)', borderRadius: '0 8px 8px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: 4 }}>
-                <span>System Logger</span>
-                <span>2 hours ago</span>
+          {/* Quick Update Creator Form */}
+          {showAddUpdate && (
+            <form onSubmit={handleCreateUpdate} style={{ marginTop: 14, padding: 14, background: 'var(--bg-subtle)', borderRadius: 10, border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: 'var(--text-dim)', display: 'block', marginBottom: 2 }}>Project</label>
+                  <select
+                    className="form-select"
+                    style={{ fontSize: '0.8rem', padding: '4px 8px', height: 32, width: '100%' }}
+                    value={updateProjectId}
+                    onChange={e => setUpdateProjectId(e.target.value)}
+                  >
+                    <option value="">General Project</option>
+                    {projectsList.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: 'var(--text-dim)', display: 'block', marginBottom: 2 }}>Update Category</label>
+                  <select
+                    className="form-select"
+                    style={{ fontSize: '0.8rem', padding: '4px 8px', height: 32, width: '100%' }}
+                    value={updateCategory}
+                    onChange={e => setUpdateCategory(e.target.value)}
+                  >
+                    <option value="Site Milestone">Site Milestone</option>
+                    <option value="Safety Check">Safety Check</option>
+                    <option value="Material Delivery">Material Delivery</option>
+                    <option value="Quality Inspection">Quality Inspection</option>
+                    <option value="Workforce Notice">Workforce Notice</option>
+                  </select>
+                </div>
               </div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Brick estimation for project generated and saved to project vault.</p>
-            </div>
+              <div>
+                <textarea
+                  className="form-input"
+                  rows={2}
+                  placeholder="Enter live site update, inspection report, or field notice..."
+                  value={updateMessage}
+                  onChange={e => setUpdateMessage(e.target.value)}
+                  style={{ fontSize: '0.85rem', width: '100%', resize: 'vertical' }}
+                  required
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddUpdate(false)}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.78rem', padding: '5px 12px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ fontSize: '0.78rem', padding: '5px 14px', display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Send size={13} /> Broadcast Update
+                </button>
+              </div>
+            </form>
+          )}
 
-            <div style={{ padding: 12, background: 'var(--bg-subtle)', borderLeft: '3px solid var(--color-success)', borderRadius: '0 8px 8px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: 4 }}>
-                <span>Mark Contractor</span>
-                <span>Yesterday</span>
+          {/* Live Updates Stream */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', maxHeight: 380, flex: 1, marginTop: 14 }}>
+            {(!updates || updates.length === 0) ? (
+              <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+                No project updates posted yet. Click <strong>Post Update</strong> above to broadcast a notice.
               </div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>Tower Crane #2 safety check certified by chief inspector.</p>
-            </div>
+            ) : (
+              updates.map((upd) => {
+                const borderCol = upd.accentColor || (
+                  upd.category === 'Safety Check' ? 'var(--color-success)' :
+                  upd.category === 'Site Milestone' ? 'var(--accent-color)' :
+                  upd.category === 'Quality Inspection' ? '#f59e0b' :
+                  'var(--primary-color)'
+                );
+                return (
+                  <div
+                    key={upd.id}
+                    style={{
+                      padding: '12px 14px',
+                      background: 'var(--bg-subtle)',
+                      borderLeft: `3px solid ${borderCol}`,
+                      borderRadius: '0 8px 8px 0',
+                      transition: 'var(--transition-smooth)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: 5 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>{upd.senderName}</strong>
+                        {upd.role && (
+                          <span className="badge" style={{ fontSize: '0.65rem', padding: '1px 6px', textTransform: 'capitalize' }}>
+                            {upd.role}
+                          </span>
+                        )}
+                        {upd.projectName && (
+                          <span style={{ color: 'var(--primary-color)', fontSize: '0.72rem' }}>
+                            • {upd.projectName}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span>{formatTimeAgo(upd.createdAt)}</span>
+                        {(user?.role === 'builder' || user?.role === 'admin' || user?.fullName === upd.senderName) && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUpdate(upd.id)}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: 2 }}
+                            title="Delete update"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.45 }}>
+                      {upd.message || upd.messageText}
+                    </p>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>
