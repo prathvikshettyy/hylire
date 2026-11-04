@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Users, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { localProjects, localChat, syncCollection } from '../utils/localStore';
 
 const TeamChat = () => {
   const { user, token, apiBaseUrl } = useAuth();
-  const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
-  const [messages, setMessages] = useState([]);
+  const [projects, setProjects] = useState(() => localProjects.list());
+  const [selectedProjectId, setSelectedProjectId] = useState(() => {
+    const list = localProjects.list();
+    return list.length > 0 ? list[0].id : '';
+  });
+  const [messages, setMessages] = useState(() => {
+    const list = localProjects.list();
+    return list.length > 0 ? localChat.listByProject(list[0].id) : [];
+  });
   const [typedMessage, setTypedMessage] = useState('');
   const chatHistoryRef = useRef(null);
 

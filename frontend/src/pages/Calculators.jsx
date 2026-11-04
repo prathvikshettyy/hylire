@@ -22,11 +22,11 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { localProjects, localSites, localEstimations } from '../utils/localStore';
+import { localProjects, localSites, localEstimations, syncCollection } from '../utils/localStore';
 
 const Calculators = () => {
   const { token, apiBaseUrl } = useAuth();
-  const [activeTab, setActiveTab] = useState('ai_estimator');
+  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('hylire_calc_tab') || 'ai_estimator');
   const [projects, setProjects] = useState(() => localProjects.list());
   const [projectId, setProjectId] = useState(() => {
     const list = localProjects.list();
@@ -53,7 +53,12 @@ const Calculators = () => {
   const [aiDoorWindowPct, setAiDoorWindowPct] = useState('0.12');
   const [aiBrickWastage, setAiBrickWastage] = useState('5.0');
   const [aiRunning, setAiRunning] = useState(false);
-  const [aiResult, setAiResult] = useState(null);
+  const [aiResult, setAiResult] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('hylire_ai_result');
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) { return null; }
+  });
 
   // 1. Brickwork & Masonry Inputs
   const [masonryType, setMasonryType] = useState('clay');
@@ -105,6 +110,17 @@ const Calculators = () => {
     const list = localProjects.list();
     return list.length > 0 ? localEstimations.listByProject(list[0].id) : { bricks: [], materials: [], costs: [], aiEstimations: [] };
   });
+
+  // Persist active tab and aiResult across page reloads
+  useEffect(() => {
+    if (activeTab) sessionStorage.setItem('hylire_calc_tab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (aiResult) {
+      try { sessionStorage.setItem('hylire_ai_result', JSON.stringify(aiResult)); } catch (e) {}
+    }
+  }, [aiResult]);
 
   // Auto-clear success message after 4 seconds
   useEffect(() => {

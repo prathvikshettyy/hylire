@@ -49,9 +49,12 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        const updated = await db.projects.update(id, req.body);
+        const updates = { ...req.body };
+        if (updates.budget !== undefined) updates.budget = parseFloat(updates.budget) || 0;
+        if (updates.spent !== undefined) updates.spent = parseFloat(updates.spent) || 0;
+        let updated = await db.projects.update(id, updates);
         if (!updated) {
-            return res.status(404).json({ error: 'Project not found' });
+            updated = await db.projects.create({ id, ...updates });
         }
         res.json(updated);
     } catch (error) {

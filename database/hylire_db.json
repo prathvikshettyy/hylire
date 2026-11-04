@@ -65,6 +65,18 @@
       "clientId": "u-3",
       "status": "active",
       "createdAt": "2026-03-01T08:00:00.000Z"
+    },
+    {
+      "id": "p-1793818569979",
+      "name": "nitte",
+      "description": "Nitte Campus Construction Project",
+      "clientId": "u-3",
+      "budget": 3000000,
+      "spent": 0,
+      "startDate": "2026-11-05",
+      "endDate": "2027-11-05",
+      "status": "planning",
+      "createdAt": "2026-11-04T18:56:09.979Z"
     }
   ],
   "sites": [
@@ -85,6 +97,14 @@
       "engineerId": "u-2",
       "status": "active",
       "createdAt": "2026-03-01T08:30:00.000Z"
+    },
+    {
+      "id": "s-1793818569983",
+      "projectId": "p-1793818569979",
+      "name": "nitte - Main Site",
+      "address": "Primary Project Site",
+      "status": "active",
+      "createdAt": "2026-11-04T18:56:09.983Z"
     }
   ],
   "tasks": [
@@ -197,7 +217,7 @@
       "siteId": "s-201",
       "category": "Foundation & Earthwork",
       "description": "Earth excavation, basement shoring & dewatering",
-      "totalEstimatedCost: 1250000,
+      "totalEstimatedCost": 1250000,
       "totalCost": 1250000,
       "createdAt": "2026-08-15T12:00:00.000Z"
     }

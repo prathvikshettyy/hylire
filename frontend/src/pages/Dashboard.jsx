@@ -14,7 +14,7 @@ import {
   Receipt
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { computeDashboardStats } from '../utils/localStore';
+import { computeDashboardStats, syncCollection } from '../utils/localStore';
 import SpentBreakdownModal from '../components/SpentBreakdownModal';
 
 const Dashboard = () => {

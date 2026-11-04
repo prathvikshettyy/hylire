@@ -60,9 +60,12 @@ function loadStore() {
             };
         }
     } catch (err) {
-        console.error('Error reading database file, using default store:', err.message);
+        console.error('Error reading database file, using fallback in-memory store:', err.message);
+        return defaultStore;
     }
-    saveStore(defaultStore);
+    if (!fs.existsSync(DB_FILE_PATH)) {
+        saveStore(defaultStore);
+    }
     return defaultStore;
 }
 

@@ -153,7 +153,8 @@ app.get('/api/monitoring/stats', async (req, res) => {
             const brickSum = bricks.reduce((s, b) => s + (parseFloat(b.totalCost || b.totalEstimatedCost) || 0), 0);
             const matSum = mats.reduce((s, m) => s + (parseFloat(m.totalCost) || 0), 0);
             const costSum = costs.reduce((s, c) => s + (parseFloat(c.totalEstimatedCost || c.totalCost) || 0), 0);
-            const totalSpent = brickSum + matSum + costSum;
+            const manualSpent = parseFloat(p.spent) || 0;
+            const totalSpent = Math.max(brickSum + matSum + costSum, manualSpent);
             totalAllSpent += totalSpent;
             
             const rawAllocated = parseFloat(p.budget) || 0;

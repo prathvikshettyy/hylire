@@ -14,10 +14,11 @@ import {
   X,
   TrendingUp,
   Layers,
-  HardHat
+  HardHat,
+  Edit3
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { localProjects, getLocalStore } from '../utils/localStore';
+import { localProjects, getLocalStore, syncCollection } from '../utils/localStore';
 import SpentBreakdownModal from '../components/SpentBreakdownModal';
 
 const Projects = () => {
@@ -38,6 +39,15 @@ const Projects = () => {
   // Spent Breakdown Modal State
   const [selectedProjectForSpend, setSelectedProjectForSpend] = useState(null);
 
+  // Edit Project States
+  const [editingProject, setEditingProject] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editBudget, setEditBudget] = useState('');
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [editStatus, setEditStatus] = useState('planning');
+
   // Fetch projects and users
   const fetchData = async () => {
     // 1. Instantly load from local storage
@@ -52,7 +62,8 @@ const Projects = () => {
       if (projRes.ok) {
         const data = await projRes.json();
         if (Array.isArray(data)) {
-          setProjects(data);
+          const merged = syncCollection('projects', data);
+          setProjects(merged);
         }
       }
 
@@ -94,6 +105,46 @@ const Projects = () => {
     } catch (err) {
       // Offline mode
     }
+  };
+
+  const handleStartEdit = (proj) => {
+    setEditingProject(proj);
+    setEditName(proj.name || '');
+    setEditDescription(proj.description || '');
+    setEditBudget(proj.budget || '');
+    setEditStartDate(proj.startDate || '');
+    setEditEndDate(proj.endDate || '');
+    setEditStatus(proj.status || 'planning');
+  };
+
+  const handleUpdateProject = async (e) => {
+    e.preventDefault();
+    if (!editingProject) return;
+
+    const newBudget = parseFloat(editBudget) || 0;
+    const payload = {
+      name: editName,
+      description: editDescription,
+      budget: newBudget,
+      startDate: editStartDate,
+      endDate: editEndDate,
+      status: editStatus
+    };
+
+    localProjects.update(editingProject.id, payload);
+    setProjects(localProjects.list());
+    setEditingProject(null);
+
+    try {
+      await fetch(`${apiBaseUrl}/projects/${editingProject.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {}
   };
 
   const handleDelete = async (id) => {
@@ -540,9 +591,29 @@ const Projects = () => {
                     <span>View spent breakdown</span>
                   </button>
 
-                  {isAuthorized && (
-                    <button 
-                      onClick={() => handleDelete(project.id)} 
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {isAuthorized && (
+                      <button
+                        type="button"
+                        onClick={() => handleStartEdit(project)}
+                        className="btn btn-secondary"
+                        style={{
+                          minHeight: 48,
+                          padding: '0 16px',
+                          fontSize: 14,
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <Edit3 size={16} />
+                        <span>Edit</span>
+                      </button>
+                    )}
+                    {isAuthorized && (
+                      <button 
+                        onClick={() => handleDelete(project.id)} 
                       style={{
                         minHeight: 48,
                         padding: '0 16px',
@@ -562,6 +633,7 @@ const Projects = () => {
                       <span>Delete</span>
                     </button>
                   )}
+                  </div>
                 </div>
               </div>
             );

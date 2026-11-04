@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, Receipt, PlusCircle, CheckCircle2, AlertTriangle, Calendar, Layers } from 'lucide-react';
+import { X, DollarSign, Receipt, PlusCircle, CheckCircle2, AlertTriangle, Calendar, Layers, Edit3 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { localProjects } from '../utils/localStore';
 
 const SpentBreakdownModal = ({ project, onClose, onExpenseAdded }) => {
@@ -11,6 +12,9 @@ const SpentBreakdownModal = ({ project, onClose, onExpenseAdded }) => {
   const [expenseDesc, setExpenseDesc] = useState('');
   const [expenseVendor, setExpenseVendor] = useState('');
   const [expenseSuccess, setExpenseSuccess] = useState('');
+  const { token, apiBaseUrl } = useAuth();
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [editBudgetAmount, setEditBudgetAmount] = useState('');
 
   // Close on Escape key
   useEffect(() => {
@@ -26,7 +30,28 @@ const SpentBreakdownModal = ({ project, onClose, onExpenseAdded }) => {
   const isOver = modalDetails.spent > modalDetails.allocated && modalDetails.allocated > 0;
   const progressPercent = modalDetails.percent;
 
-  const handleAddExpense = (e) => {
+  const handleSaveBudget = async (e) => {
+    e.preventDefault();
+    const newBud = parseFloat(editBudgetAmount) || 0;
+    if (newBud <= 0) return;
+    localProjects.update(projectId, { budget: newBud });
+    try {
+      await fetch(`${apiBaseUrl}/projects/${projectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ budget: newBud })
+      });
+    } catch (err) {}
+    setIsEditingBudget(false);
+    setExpenseSuccess(`Allocated budget updated to ₹${newBud.toLocaleString('en-IN')} successfully!`);
+    if (onExpenseAdded) onExpenseAdded();
+    setTimeout(() => setExpenseSuccess(''), 3500);
+  };
+
+  const handleAddExpense = async (e) => {
     e.preventDefault();
     const amt = parseFloat(expenseAmount) || 0;
     if (amt <= 0) return;
@@ -37,6 +62,18 @@ const SpentBreakdownModal = ({ project, onClose, onExpenseAdded }) => {
       description: expenseDesc || `${expenseCategory} expenditure`,
       vendor: expenseVendor || 'Site Field Voucher'
     });
+
+    try {
+      const updatedDet = localProjects.getSpentDetails(projectId);
+      await fetch(`${apiBaseUrl}/projects/${projectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ spent: updatedDet.spent })
+      });
+    } catch (err) {}
 
     setExpenseSuccess(`Recorded ₹${amt.toLocaleString('en-IN')} under ${expenseCategory} successfully!`);
     setExpenseAmount('');

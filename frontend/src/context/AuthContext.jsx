@@ -19,8 +19,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check sessionStorage for existing session
-    const savedUser = sessionStorage.getItem('hylire_user');
-    const savedToken = sessionStorage.getItem('hylire_token');
+    const savedUser = localStorage.getItem('hylire_user') || sessionStorage.getItem('hylire_user');
+    const savedToken = localStorage.getItem('hylire_token') || sessionStorage.getItem('hylire_token');
     
     if (savedUser && savedToken) {
       setUser(JSON.parse(savedUser));
@@ -41,6 +41,8 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         setUser(data.user);
         setToken(data.token);
+        localStorage.setItem('hylire_user', JSON.stringify(data.user));
+        localStorage.setItem('hylire_token', data.token);
         sessionStorage.setItem('hylire_user', JSON.stringify(data.user));
         sessionStorage.setItem('hylire_token', data.token);
         return { success: true };
@@ -60,6 +62,8 @@ export const AuthProvider = ({ children }) => {
         setUser(matchedMockUser);
         const mockToken = `mock-token-${matchedMockUser.id}-${Date.now()}`;
         setToken(mockToken);
+        localStorage.setItem('hylire_user', JSON.stringify(matchedMockUser));
+        localStorage.setItem('hylire_token', mockToken);
         sessionStorage.setItem('hylire_user', JSON.stringify(matchedMockUser));
         sessionStorage.setItem('hylire_token', mockToken);
         return { success: true };
@@ -150,6 +154,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
+    localStorage.removeItem('hylire_user');
+    localStorage.removeItem('hylire_token');
     sessionStorage.removeItem('hylire_user');
     sessionStorage.removeItem('hylire_token');
   };

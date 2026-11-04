@@ -29,7 +29,7 @@ const Sites = () => {
       });
       if (projRes.ok) {
         const data = await projRes.json();
-        if (Array.isArray(data)) setProjects(data);
+        if (Array.isArray(data)) setProjects(syncCollection('projects', data));
       }
 
       const siteRes = await fetch(`${apiBaseUrl}/sites`, {
@@ -37,7 +37,7 @@ const Sites = () => {
       });
       if (siteRes.ok) {
         const data = await siteRes.json();
-        if (Array.isArray(data)) setSites(data);
+        if (Array.isArray(data)) setSites(syncCollection('sites', data));
       }
 
       const userRes = await fetch(`${apiBaseUrl}/auth/list`, {

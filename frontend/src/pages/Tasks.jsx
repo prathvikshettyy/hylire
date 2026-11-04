@@ -51,11 +51,12 @@ const Tasks = () => {
 
       if (projRes.ok) {
         const pData = await projRes.json();
-        if (Array.isArray(pData)) setProjects(pData);
+        if (Array.isArray(pData)) setProjects(syncCollection('projects', pData));
       }
       if (siteRes.ok) {
         const sData = await siteRes.json();
         if (Array.isArray(sData)) {
+          syncCollection('sites', sData);
           setSites(sData);
           if (sData.length > 0) {
             setSelectedSiteId(curr => {
@@ -94,7 +95,10 @@ const Tasks = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data)) setTasks(data);
+        if (Array.isArray(data)) {
+          const mergedT = syncCollection('tasks', data);
+          setTasks(mergedT.filter(t => t.siteId === targetId));
+        }
       }
     } catch (err) {
       // Offline mode

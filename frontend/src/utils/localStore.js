@@ -13,48 +13,48 @@ const DEFAULT_INITIAL_STATE = {
   ],
   projects: [
     {
-      id: "p-201",
-      name: "Skyline Commercial Complex",
-      description: "G+14 Commercial Office Tower with 2-level basement parking",
-      budget: 45000000,
-      spent: 18500000,
-      startDate: "2026-01-10",
-      endDate: "2026-12-31",
+      id: "p-1789872275380",
+      name: "Alva's",
+      description: "egee",
+      budget: 12000000,
+      spent: 8416800,
+      startDate: "2026-09-20",
+      endDate: "2027-09-22",
       clientId: "u-3",
-      status: "in_progress",
-      createdAt: "2026-01-10T08:00:00.000Z"
+      status: "planning",
+      createdAt: "2026-09-20T02:44:35.380Z"
     },
     {
-      id: "p-202",
-      name: "Green Valley Residential Enclave",
-      description: "42 Luxury Villas with clubhouse and internal arterial roads",
-      budget: 28000000,
-      spent: 9800000,
-      startDate: "2026-03-01",
-      endDate: "2027-02-28",
+      id: "p-1793818569979",
+      name: "nitte",
+      description: "Nitte Campus Construction Project",
+      budget: 3000000,
+      spent: 0,
+      startDate: "2026-11-05",
+      endDate: "2027-11-05",
       clientId: "u-3",
-      status: "active",
-      createdAt: "2026-03-01T08:00:00.000Z"
+      status: "planning",
+      createdAt: "2026-11-04T18:56:09.979Z"
     }
   ],
   sites: [
     {
-      id: "s-201",
-      projectId: "p-201",
-      name: "Skyline Tower - Sector 62",
-      address: "Plot 4B, Sector 62, Noida",
+      id: "s-1789872275394",
+      projectId: "p-1789872275380",
+      name: "Alva's - Main Site",
+      address: "Primary Project Site",
       engineerId: "u-2",
       status: "active",
-      createdAt: "2026-01-10T08:30:00.000Z"
+      createdAt: "2026-09-20T02:44:35.394Z"
     },
     {
-      id: "s-202",
-      projectId: "p-202",
-      name: "Green Valley - Phase 1",
-      address: "Varthur Main Road, Whitefield, Bangalore",
+      id: "s-1793818569983",
+      projectId: "p-1793818569979",
+      name: "nitte - Main Site",
+      address: "Primary Project Site",
       engineerId: "u-2",
       status: "active",
-      createdAt: "2026-03-01T08:30:00.000Z"
+      createdAt: "2026-11-04T18:56:09.983Z"
     }
   ],
   tasks: [
@@ -260,6 +260,34 @@ export const saveLocalStore = (store) => {
   }
 };
 
+// Unified Bidirectional Sync Helper: merges API data into localStore so data is NEVER cleared on refresh
+export const syncCollection = (collectionName, apiItems) => {
+  if (!Array.isArray(apiItems) || apiItems.length === 0) {
+    return getLocalStore()[collectionName] || [];
+  }
+  const store = getLocalStore();
+  const currentItems = Array.isArray(store[collectionName]) ? store[collectionName] : [];
+
+  const map = new Map();
+  currentItems.forEach(item => {
+    const key = String(item.id || item._id);
+    if (key) map.set(key, item);
+  });
+
+  apiItems.forEach(apiItem => {
+    const key = String(apiItem.id || apiItem._id);
+    if (key) {
+      const existing = map.get(key);
+      map.set(key, existing ? { ...existing, ...apiItem } : apiItem);
+    }
+  });
+
+  const merged = Array.from(map.values());
+  store[collectionName] = merged;
+  saveLocalStore(store);
+  return merged;
+};
+
 // ==========================================
 // Specific Collection Operations
 // ==========================================
@@ -296,8 +324,7 @@ export const localProjects = {
     const manualSpent = Number(proj?.spent) || 0;
     const directSpendRecorded = Math.max(expensesTotal, manualSpent);
     const computedTotal = matsTotal + bricksTotal + costsTotal + directSpendRecorded;
-    const baselineSpent = allocated > 0 ? Math.round(allocated * 0.41) : 0;
-    const totalSpent = computedTotal > 0 ? computedTotal : baselineSpent;
+    const totalSpent = computedTotal;
 
     const remaining = Math.max(0, allocated - totalSpent);
     const percent = allocated > 0 ? Math.round((totalSpent / allocated) * 100) : 0;
@@ -357,53 +384,6 @@ export const localProjects = {
       });
     });
 
-    // 5. If no individual line items exist yet but totalSpent > 0, generate realistic construction phase line items
-    if (items.length === 0 && totalSpent > 0) {
-      const matAmt = Math.round(totalSpent * 0.45);
-      const laborAmt = Math.round(totalSpent * 0.30);
-      const brickAmt = Math.round(totalSpent * 0.15);
-      const miscAmt = Math.max(0, totalSpent - (matAmt + laborAmt + brickAmt));
-
-      items.push(
-        {
-          id: 'base-mat-1',
-          type: 'Material',
-          category: 'Materials & Concrete',
-          name: 'Ready-Mix Concrete & Cement (Grade M25)',
-          desc: 'Structural foundation casting & RCC column pours',
-          amount: matAmt,
-          date: new Date(Date.now() - 14 * 86400000).toISOString()
-        },
-        {
-          id: 'base-lab-1',
-          type: 'Labor & Operations',
-          category: 'Labor & Operations',
-          name: 'Site Excavation & Foundation Shuttering',
-          desc: 'Earthwork, shoring & bar bending labor gang',
-          amount: laborAmt,
-          date: new Date(Date.now() - 20 * 86400000).toISOString()
-        },
-        {
-          id: 'base-brk-1',
-          type: 'Brickwork',
-          category: 'Brickwork & Masonry',
-          name: 'Red Clay Bricks & Masonry Mortar',
-          desc: 'Basement partition & perimeter masonry work',
-          amount: brickAmt,
-          date: new Date(Date.now() - 7 * 86400000).toISOString()
-        },
-        {
-          id: 'base-exp-1',
-          type: 'Site Expense',
-          category: 'Equipment & Permits',
-          name: 'Excavator Rental & Municipal NOC',
-          desc: 'Machinery mobilization & statutory clearance fees',
-          amount: miscAmt,
-          date: new Date(Date.now() - 28 * 86400000).toISOString()
-        }
-      );
-    }
-
     // Sort items by date descending (newest first)
     items.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
@@ -449,6 +429,25 @@ export const localProjects = {
 
     saveLocalStore(store);
     return newProj;
+  },
+  update(id, updates) {
+    const store = getLocalStore();
+    let updatedProj = null;
+    store.projects = (store.projects || []).map(p => {
+      if (p.id === id || p._id === id) {
+        updatedProj = {
+          ...p,
+          ...updates,
+          budget: updates.budget !== undefined ? (parseFloat(updates.budget) || 0) : p.budget,
+          spent: updates.spent !== undefined ? (parseFloat(updates.spent) || 0) : p.spent,
+          updatedAt: new Date().toISOString()
+        };
+        return updatedProj;
+      }
+      return p;
+    });
+    saveLocalStore(store);
+    return updatedProj;
   },
   recordExpense(projectId, expense) {
     const store = getLocalStore();
@@ -574,6 +573,32 @@ export const localTasks = {
 
 // Estimations
 export const localEstimations = {
+  syncFromApi(apiData) {
+    if (!apiData) return;
+    const store = getLocalStore();
+    const types = [
+      { apiKey: 'bricks', storeKey: 'brickEstimations' },
+      { apiKey: 'materials', storeKey: 'materials' },
+      { apiKey: 'costs', storeKey: 'costEstimations' },
+      { apiKey: 'aiEstimations', storeKey: 'aiEstimations' }
+    ];
+    types.forEach(({ apiKey, storeKey }) => {
+      const incoming = apiData[apiKey];
+      if (Array.isArray(incoming) && incoming.length > 0) {
+        const map = new Map();
+        (store[storeKey] || []).forEach(item => map.set(String(item.id || item._id), item));
+        incoming.forEach(item => {
+          const id = String(item.id || item._id);
+          if (id) {
+            const existing = map.get(id);
+            map.set(id, existing ? { ...existing, ...item } : item);
+          }
+        });
+        store[storeKey] = Array.from(map.values());
+      }
+    });
+    saveLocalStore(store);
+  },
   listByProject(projectId, siteId) {
     const store = getLocalStore();
     const matches = item => {
@@ -740,7 +765,7 @@ export const computeDashboardStats = () => {
     const manualSpent = Number(p.spent) || 0;
     const directSpend = Math.max(projExpensesCost, manualSpent);
     const computedSpent = projMatsCost + projEstCost + projBricksCost + directSpend;
-    const rawSpent = computedSpent > 0 ? computedSpent : (rawAllocated > 0 ? Math.round(rawAllocated * 0.41) : 0);
+    const rawSpent = computedSpent;
     totalAllSpent += rawSpent;
 
     const spentLakhs = parseFloat((rawSpent / 100000).toFixed(2));

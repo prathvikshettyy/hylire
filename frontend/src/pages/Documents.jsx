@@ -20,7 +20,7 @@ import {
   Plus
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { localDocuments, localProjects } from '../utils/localStore';
+import { localDocuments, localProjects, syncCollection } from '../utils/localStore';
 
 const CATEGORIES = [
   { id: 'all', label: 'All Files' },
@@ -78,7 +78,7 @@ const Documents = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data)) setProjects(data);
+        if (Array.isArray(data)) setProjects(syncCollection('projects', data));
       }
     } catch (err) {
       // Offline mode
@@ -96,7 +96,10 @@ const Documents = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data)) setDocuments(data);
+        if (Array.isArray(data)) {
+          const merged = syncCollection('documents', data);
+          setDocuments(merged.filter(d => d.projectId === selectedProjectId));
+        }
       }
     } catch (err) {
       // Offline mode
