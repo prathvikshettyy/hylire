@@ -59,25 +59,27 @@
   ],
   "projects": [
     {
-      "id": "p-1793821478316",
-      "name": "hj",
-      "description": "",
-      "clientId": null,
+      "id": "p-1793822033977",
+      "name": "erty",
+      "description": "ert",
+      "clientId": "u-3",
       "budget": 100000,
+      "spent": 10000,
       "startDate": "",
       "endDate": "",
       "status": "planning",
-      "createdAt": "2026-11-04T19:44:38.316Z"
+      "createdAt": "2026-11-04T19:53:53.992Z",
+      "updatedAt": "2026-11-04T19:54:34.138Z"
     }
   ],
   "sites": [
     {
-      "id": "s-1793821478320",
-      "projectId": "p-1793821478316",
-      "name": "hj - Main Site",
+      "id": "s-1793822033995",
+      "projectId": "p-1793822033977",
+      "name": "erty - Main Site",
       "address": "Primary Project Site",
       "status": "active",
-      "createdAt": "2026-11-04T19:44:38.320Z"
+      "createdAt": "2026-11-04T19:53:53.995Z"
     }
   ],
   "tasks": [

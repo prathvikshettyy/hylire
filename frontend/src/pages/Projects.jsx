@@ -100,7 +100,11 @@ const Projects = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          id: newProj.id,
+          spent: newProj.spent || 0
+        })
       });
     } catch (err) {
       // Offline mode

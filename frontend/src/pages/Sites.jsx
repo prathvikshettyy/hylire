@@ -63,7 +63,7 @@ const Sites = () => {
     const payload = { projectId, name, address, engineerId };
 
     // 1. Save directly to local store
-    localSites.create(payload);
+    const newSite = localSites.create(payload);
     setSites(localSites.list());
     resetForm();
 
@@ -75,10 +75,13 @@ const Sites = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          id: newSite.id
+        })
       });
     } catch (err) {
-      // Offline mode
+      // Keep local state
     }
   };
 

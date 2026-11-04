@@ -15,29 +15,34 @@ router.get('/', async (req, res) => {
 
 // Create Project
 router.post('/', async (req, res) => {
-    const { name, description, clientId, budget, startDate, endDate } = req.body;
+    const { id, name, description, clientId, budget, startDate, endDate, spent } = req.body;
     if (!name) {
         return res.status(400).json({ error: 'Project name is required' });
     }
 
     try {
         const newProj = await db.projects.create({
+            id: id || undefined,
             name,
-            description,
+            description: description || '',
             clientId: clientId || null,
-            budget: budget ? parseFloat(budget) : 0,
-            startDate,
-            endDate,
+            budget: budget !== undefined ? parseFloat(budget) : 0,
+            spent: spent !== undefined ? parseFloat(spent) : 0,
+            startDate: startDate || '',
+            endDate: endDate || '',
             status: 'planning'
         });
 
-        // Auto-create a primary construction site for this project so tasks can be assigned immediately
-        await db.sites.create({
-            projectId: newProj.id,
-            name: `${name} - Main Site`,
-            address: 'Primary Project Site',
-            status: 'active'
-        });
+        // Auto-create a primary construction site only if none exists yet for this project
+        const existingSites = await db.sites.list({ projectId: newProj.id });
+        if (!existingSites || existingSites.length === 0) {
+            await db.sites.create({
+                projectId: newProj.id,
+                name: `${name} - Main Site`,
+                address: 'Primary Project Site',
+                status: 'active'
+            });
+        }
 
         res.status(201).json(newProj);
     } catch (error) {

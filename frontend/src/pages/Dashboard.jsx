@@ -25,11 +25,24 @@ const Dashboard = () => {
   const [selectedProjectForSpend, setSelectedProjectForSpend] = useState(null);
 
   const fetchStats = async () => {
-    // 1. Instantly compute stats from local storage
+    // 1. Sync projects with API first if reachable
+    try {
+      const projRes = await fetch(`${apiBaseUrl}/projects`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (projRes.ok) {
+        const projData = await projRes.json();
+        if (Array.isArray(projData)) {
+          syncCollection('projects', projData);
+        }
+      }
+    } catch (e) {}
+
+    // 2. Compute stats from synced local storage
     const localData = computeDashboardStats();
     setStats(localData);
 
-    // 2. If API backend is available, sync with API
+    // 3. If API backend is available, sync with API monitoring stats
     try {
       setLoading(true);
       const res = await fetch(`${apiBaseUrl}/monitoring/stats`, {
@@ -37,12 +50,14 @@ const Dashboard = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data && typeof data.totalProjects !== 'undefined') {
+        if (data && typeof data.totalProjects !== 'undefined' && data.totalProjects >= localData.totalProjects) {
           setStats(data);
+        } else {
+          setStats(computeDashboardStats());
         }
       }
     } catch (err) {
-      // On offline mode / fallback, localData is active
+      setStats(computeDashboardStats());
     } finally {
       setLoading(false);
     }

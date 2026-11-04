@@ -15,18 +15,19 @@ router.get('/', async (req, res) => {
 
 // Create Site
 router.post('/', async (req, res) => {
-    const { projectId, name, address, engineerId } = req.body;
+    const { id, projectId, name, address, engineerId, status } = req.body;
     if (!projectId || !name) {
         return res.status(400).json({ error: 'Project ID and Site Name are required' });
     }
 
     try {
         const newSite = await db.sites.create({
+            id: id || undefined,
             projectId,
             name,
             address: address || '',
             engineerId: engineerId || null,
-            status: 'active'
+            status: status || 'active'
         });
         res.status(201).json(newSite);
     } catch (error) {
@@ -43,6 +44,20 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Site not found' });
         }
         res.json(updated);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete Site
+router.delete('/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const success = await db.sites.delete(id);
+        if (!success) {
+            return res.status(404).json({ error: 'Site not found' });
+        }
+        res.json({ message: 'Site deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

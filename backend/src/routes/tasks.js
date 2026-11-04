@@ -15,18 +15,19 @@ router.get('/', async (req, res) => {
 
 // Create Task
 router.post('/', async (req, res) => {
-    const { siteId, name, description, assignedTo, priority, deadline } = req.body;
+    const { id, siteId, name, description, assignedTo, priority, deadline, status, stage } = req.body;
     if (!siteId || !name) {
         return res.status(400).json({ error: 'Site ID and Task Name are required' });
     }
 
     try {
         const newTask = await db.tasks.create({
+            id: id || undefined,
             siteId,
             name,
             description: description || '',
             assignedTo: assignedTo || null,
-            status: 'todo',
+            status: status || stage || 'todo',
             priority: priority || 'medium',
             deadline: deadline || null
         });
@@ -45,6 +46,20 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Task not found' });
         }
         res.json(updated);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete Task
+router.delete('/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const success = await db.tasks.delete(id);
+        if (!success) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+        res.json({ message: 'Task deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

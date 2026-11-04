@@ -146,7 +146,27 @@ const db = {
                 if (data) return data;
             }
             const store = getStore();
-            let res = store.projects;
+            let res = store.projects || [];
+            // Filter out empty or corrupted project stubs without a valid name
+            res = res.filter(p => p && p.name && p.name !== 'undefined' && String(p.name).trim() !== '');
+            // Deduplicate by normalized name
+            const seen = new Map();
+            res.forEach(p => {
+                const key = String(p.name).trim().toLowerCase();
+                if (!seen.has(key)) {
+                    seen.set(key, p);
+                } else {
+                    const existing = seen.get(key);
+                    seen.set(key, {
+                        ...existing,
+                        ...p,
+                        id: existing.id,
+                        spent: Math.max(Number(existing.spent) || 0, Number(p.spent) || 0),
+                        budget: Number(p.budget) || Number(existing.budget) || 0
+                    });
+                }
+            });
+            res = Array.from(seen.values());
             if (filters.clientId) {
                 res = res.filter(p => p.clientId === filters.clientId);
             }
@@ -159,38 +179,65 @@ const db = {
                 if (data) return data;
             }
             const store = getStore();
-            return store.projects.find(p => p.id === id);
+            return (store.projects || []).find(p => p.id === id);
         },
         async create(project) {
             const newProject = { 
-                id: `p-${Date.now()}`, 
+                id: project.id || `p-${Date.now()}`, 
                 ...project, 
-                createdAt: new Date().toISOString() 
+                createdAt: project.createdAt || new Date().toISOString() 
             };
             if (supabase) {
-                const { data, error } = await supabase.from('projects').insert([{
-                    name: project.name,
-                    description: project.description,
-                    client_id: project.clientId,
-                    status: project.status || 'planning',
-                    start_date: project.startDate,
-                    end_date: project.endDate,
-                    budget: project.budget
-                }]).select().single();
-                if (error) throw error;
-                newProject.id = data.id;
+                try {
+                    const { data, error } = await supabase.from('projects').insert([{
+                        name: project.name,
+                        description: project.description,
+                        client_id: project.clientId,
+                        status: project.status || 'planning',
+                        start_date: project.startDate,
+                        end_date: project.endDate,
+                        budget: project.budget
+                    }]).select().single();
+                    if (!error && data) newProject.id = data.id;
+                } catch (e) {}
             }
             const store = getStore();
+            if (!store.projects) store.projects = [];
+            
+            // Check if project exists by ID
+            const existingIdIdx = store.projects.findIndex(p => p.id === newProject.id);
+            if (existingIdIdx !== -1) {
+                store.projects[existingIdIdx] = { ...store.projects[existingIdIdx], ...newProject };
+                saveStore(store);
+                return store.projects[existingIdIdx];
+            }
+
+            // Check if project exists by normalized name to prevent duplicate creation
+            const normName = String(newProject.name || '').trim().toLowerCase();
+            const existingNameIdx = normName ? store.projects.findIndex(p => String(p.name || '').trim().toLowerCase() === normName) : -1;
+            if (existingNameIdx !== -1) {
+                store.projects[existingNameIdx] = {
+                    ...store.projects[existingNameIdx],
+                    ...newProject,
+                    id: store.projects[existingNameIdx].id,
+                    spent: Math.max(Number(store.projects[existingNameIdx].spent) || 0, Number(newProject.spent) || 0)
+                };
+                saveStore(store);
+                return store.projects[existingNameIdx];
+            }
+
             store.projects.push(newProject);
             saveStore(store);
             return newProject;
         },
         async update(id, updates) {
             if (supabase) {
-                const { data, error } = await supabase.from('projects').update(updates).eq('id', id).select().single();
-                if (error) throw error;
+                try {
+                    await supabase.from('projects').update(updates).eq('id', id);
+                } catch (e) {}
             }
             const store = getStore();
+            if (!store.projects) store.projects = [];
             const idx = store.projects.findIndex(p => p.id === id);
             if (idx === -1) return null;
             store.projects[idx] = { ...store.projects[idx], ...updates, updatedAt: new Date().toISOString() };
@@ -199,20 +246,22 @@ const db = {
         },
         async delete(id) {
             if (supabase) {
-                const { error } = await supabase.from('projects').delete().eq('id', id);
-                if (error) throw error;
+                try {
+                    await supabase.from('projects').delete().eq('id', id);
+                } catch (e) {}
             }
             const store = getStore();
+            if (!store.projects) store.projects = [];
             const idx = store.projects.findIndex(p => p.id === id);
             if (idx === -1) return false;
             store.projects.splice(idx, 1);
             // Cascade delete sub-sites, tasks, materials, estimations
-            store.sites = store.sites.filter(s => s.projectId !== id);
-            store.materials = store.materials.filter(m => m.projectId !== id);
-            store.brickEstimations = store.brickEstimations.filter(b => b.projectId !== id);
-            store.costEstimations = store.costEstimations.filter(c => c.projectId !== id);
-            store.documents = store.documents.filter(d => d.projectId !== id);
-            store.chatMessages = store.chatMessages.filter(msg => msg.projectId !== id);
+            store.sites = (store.sites || []).filter(s => s.projectId !== id);
+            store.materials = (store.materials || []).filter(m => m.projectId !== id);
+            store.brickEstimations = (store.brickEstimations || []).filter(b => b.projectId !== id);
+            store.costEstimations = (store.costEstimations || []).filter(c => c.projectId !== id);
+            store.documents = (store.documents || []).filter(d => d.projectId !== id);
+            store.chatMessages = (store.chatMessages || []).filter(msg => msg.projectId !== id);
             saveStore(store);
             return true;
         }
@@ -236,19 +285,27 @@ const db = {
             return res;
         },
         async create(site) {
-            const newSite = { id: `s-${Date.now()}`, ...site, createdAt: new Date().toISOString() };
+            const newSite = { id: site.id || `s-${Date.now()}`, ...site, createdAt: site.createdAt || new Date().toISOString() };
             if (supabase) {
-                const { data, error } = await supabase.from('sites').insert([{
-                    project_id: site.projectId,
-                    name: site.name,
-                    address: site.address,
-                    engineer_id: site.engineerId,
-                    status: site.status || 'active'
-                }]).select().single();
-                if (error) throw error;
-                newSite.id = data.id;
+                try {
+                    const { data, error } = await supabase.from('sites').insert([{
+                        project_id: site.projectId,
+                        name: site.name,
+                        address: site.address,
+                        engineer_id: site.engineerId,
+                        status: site.status || 'active'
+                    }]).select().single();
+                    if (!error && data) newSite.id = data.id;
+                } catch (e) {}
             }
             const store = getStore();
+            if (!store.sites) store.sites = [];
+            const existingIdx = store.sites.findIndex(s => s.id === newSite.id || (s.projectId === newSite.projectId && String(s.name).trim().toLowerCase() === String(newSite.name).trim().toLowerCase()));
+            if (existingIdx !== -1) {
+                store.sites[existingIdx] = { ...store.sites[existingIdx], ...newSite };
+                saveStore(store);
+                return store.sites[existingIdx];
+            }
             store.sites.push(newSite);
             saveStore(store);
             return newSite;
@@ -285,21 +342,29 @@ const db = {
             return res;
         },
         async create(task) {
-            const newTask = { id: `t-${Date.now()}`, ...task, createdAt: new Date().toISOString() };
+            const newTask = { id: task.id || `t-${Date.now()}`, ...task, createdAt: task.createdAt || new Date().toISOString() };
             if (supabase) {
-                const { data, error } = await supabase.from('tasks').insert([{
-                    site_id: task.siteId,
-                    name: task.name,
-                    description: task.description,
-                    assigned_to: task.assignedTo,
-                    status: task.status || 'todo',
-                    priority: task.priority || 'medium',
-                    deadline: task.deadline
-                }]).select().single();
-                if (error) throw error;
-                newTask.id = data.id;
+                try {
+                    const { data, error } = await supabase.from('tasks').insert([{
+                        site_id: task.siteId,
+                        name: task.name,
+                        description: task.description,
+                        assigned_to: task.assignedTo,
+                        status: task.status || 'todo',
+                        priority: task.priority || 'medium',
+                        deadline: task.deadline
+                    }]).select().single();
+                    if (!error && data) newTask.id = data.id;
+                } catch (e) {}
             }
             const store = getStore();
+            if (!store.tasks) store.tasks = [];
+            const existingIdx = store.tasks.findIndex(t => t.id === newTask.id || (t.siteId === newTask.siteId && String(t.name).trim().toLowerCase() === String(newTask.name).trim().toLowerCase()));
+            if (existingIdx !== -1) {
+                store.tasks[existingIdx] = { ...store.tasks[existingIdx], ...newTask };
+                saveStore(store);
+                return store.tasks[existingIdx];
+            }
             store.tasks.push(newTask);
             saveStore(store);
             return newTask;

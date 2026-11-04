@@ -35,6 +35,18 @@ const DEFAULT_INITIAL_STATE = {
       clientId: "u-3",
       status: "planning",
       createdAt: "2026-11-04T18:56:09.979Z"
+    },
+    {
+      id: "p-1793820952330",
+      name: "pta",
+      description: "PTA Residential Enclave Project",
+      budget: 200000,
+      spent: 10000,
+      startDate: "2026-11-04",
+      endDate: "2027-11-02",
+      clientId: "u-3",
+      status: "planning",
+      createdAt: "2026-11-04T19:35:52.330Z"
     }
   ],
   sites: [
@@ -55,6 +67,15 @@ const DEFAULT_INITIAL_STATE = {
       engineerId: "u-2",
       status: "active",
       createdAt: "2026-11-04T18:56:09.983Z"
+    },
+    {
+      id: "s-1793820952332",
+      projectId: "p-1793820952330",
+      name: "pta - Main Site",
+      address: "Primary Project Site",
+      engineerId: "u-2",
+      status: "active",
+      createdAt: "2026-11-04T19:35:52.332Z"
     }
   ],
   tasks: [
@@ -214,27 +235,34 @@ export const getLocalStore = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_INITIAL_STATE));
+      saveLocalStore(DEFAULT_INITIAL_STATE);
       return DEFAULT_INITIAL_STATE;
     }
     const parsed = JSON.parse(raw);
+    const rawProjects = Array.isArray(parsed.projects) ? parsed.projects : DEFAULT_INITIAL_STATE.projects;
     
-    // Ensure default projects exist if parsed projects is empty
-    if (!Array.isArray(parsed.projects) || parsed.projects.length === 0) {
-      parsed.projects = DEFAULT_INITIAL_STATE.projects;
-      parsed.sites = DEFAULT_INITIAL_STATE.sites;
-      parsed.tasks = DEFAULT_INITIAL_STATE.tasks;
-      parsed.materials = DEFAULT_INITIAL_STATE.materials;
-      parsed.brickEstimations = DEFAULT_INITIAL_STATE.brickEstimations;
-      parsed.costEstimations = DEFAULT_INITIAL_STATE.costEstimations;
-      parsed.expenses = DEFAULT_INITIAL_STATE.expenses;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-    }
+    // Clean and deduplicate projects by normalized name and remove nameless stubs
+    const cleanProjects = [];
+    const seenNames = new Map();
+    rawProjects.forEach(p => {
+      if (!p || !p.name || p.name === 'undefined' || String(p.name).trim() === '') return;
+      const key = String(p.name).trim().toLowerCase();
+      if (!seenNames.has(key)) {
+        const copy = { ...p };
+        seenNames.set(key, copy);
+        cleanProjects.push(copy);
+      } else {
+        const existing = seenNames.get(key);
+        existing.spent = Math.max(Number(existing.spent) || 0, Number(p.spent) || 0);
+        if ((!existing.budget || existing.budget === 0) && p.budget) {
+          existing.budget = p.budget;
+        }
+      }
+    });
 
-    // Ensure all required collections exist
     return {
-      users: Array.isArray(parsed.users) && parsed.users.length > 0 ? parsed.users : DEFAULT_INITIAL_STATE.users,
-      projects: Array.isArray(parsed.projects) && parsed.projects.length > 0 ? parsed.projects : DEFAULT_INITIAL_STATE.projects,
+      users: Array.isArray(parsed.users) ? parsed.users : DEFAULT_INITIAL_STATE.users,
+      projects: cleanProjects.length > 0 ? cleanProjects : DEFAULT_INITIAL_STATE.projects,
       sites: Array.isArray(parsed.sites) ? parsed.sites : DEFAULT_INITIAL_STATE.sites,
       tasks: Array.isArray(parsed.tasks) ? parsed.tasks : DEFAULT_INITIAL_STATE.tasks,
       materials: Array.isArray(parsed.materials) ? parsed.materials : DEFAULT_INITIAL_STATE.materials,
@@ -282,7 +310,62 @@ export const syncCollection = (collectionName, apiItems) => {
     }
   });
 
-  const merged = Array.from(map.values());
+  let merged = Array.from(map.values());
+
+  // Deduplicate and sanitize projects: remove nameless stubs and merge duplicates by name
+  if (collectionName === 'projects') {
+    const clean = [];
+    const nameMap = new Map();
+    merged.forEach(p => {
+      if (!p || !p.name || p.name === 'undefined' || String(p.name).trim() === '') return;
+      const nameKey = String(p.name).trim().toLowerCase();
+      if (!nameMap.has(nameKey)) {
+        const copy = { ...p };
+        nameMap.set(nameKey, copy);
+        clean.push(copy);
+      } else {
+        const prev = nameMap.get(nameKey);
+        prev.spent = Math.max(Number(prev.spent) || 0, Number(p.spent) || 0);
+        if ((!prev.budget || prev.budget === 0) && p.budget) {
+          prev.budget = p.budget;
+        }
+        if (!prev.startDate && p.startDate) prev.startDate = p.startDate;
+        if (!prev.endDate && p.endDate) prev.endDate = p.endDate;
+      }
+    });
+    merged = clean;
+  }
+
+  // Deduplicate sites by (projectId + name)
+  if (collectionName === 'sites') {
+    const cleanSites = [];
+    const siteMap = new Map();
+    merged.forEach(s => {
+      if (!s || !s.name) return;
+      const sKey = `${s.projectId || ''}_${String(s.name).trim().toLowerCase()}`;
+      if (!siteMap.has(sKey)) {
+        siteMap.set(sKey, s);
+        cleanSites.push(s);
+      }
+    });
+    merged = cleanSites;
+  }
+
+  // Deduplicate tasks by (siteId + name)
+  if (collectionName === 'tasks') {
+    const cleanTasks = [];
+    const taskMap = new Map();
+    merged.forEach(t => {
+      if (!t || !t.name) return;
+      const tKey = `${t.siteId || ''}_${String(t.name).trim().toLowerCase()}`;
+      if (!taskMap.has(tKey)) {
+        taskMap.set(tKey, t);
+        cleanTasks.push(t);
+      }
+    });
+    merged = cleanTasks;
+  }
+
   store[collectionName] = merged;
   saveLocalStore(store);
   return merged;
@@ -401,6 +484,23 @@ export const localProjects = {
   },
   create(project) {
     const store = getLocalStore();
+    const normName = String(project.name || '').trim().toLowerCase();
+    
+    // Check if project with same name already exists
+    if (normName) {
+      const existingIdx = (store.projects || []).findIndex(p => String(p.name || '').trim().toLowerCase() === normName);
+      if (existingIdx !== -1) {
+        store.projects[existingIdx] = {
+          ...store.projects[existingIdx],
+          ...project,
+          budget: parseFloat(project.budget) || store.projects[existingIdx].budget,
+          updatedAt: new Date().toISOString()
+        };
+        saveLocalStore(store);
+        return store.projects[existingIdx];
+      }
+    }
+
     const newProj = {
       id: project.id || `p-${Date.now()}`,
       name: project.name || 'Untitled Project',
@@ -413,19 +513,22 @@ export const localProjects = {
       status: project.status || 'planning',
       createdAt: new Date().toISOString()
     };
-    store.projects = [newProj, ...store.projects];
+    store.projects = [newProj, ...(store.projects || [])];
     
-    // Auto-create default site for this project
-    const defaultSite = {
-      id: `s-${Date.now()}`,
-      projectId: newProj.id,
-      name: `${newProj.name} - Main Site`,
-      address: 'Primary Project Site Location',
-      engineerId: null,
-      status: 'active',
-      createdAt: new Date().toISOString()
-    };
-    store.sites.push(defaultSite);
+    // Auto-create default site for this project if not already present
+    const existingSite = (store.sites || []).find(s => s.projectId === newProj.id);
+    if (!existingSite) {
+      const defaultSite = {
+        id: `s-${Date.now()}`,
+        projectId: newProj.id,
+        name: `${newProj.name} - Main Site`,
+        address: 'Primary Project Site Location',
+        engineerId: null,
+        status: 'active',
+        createdAt: new Date().toISOString()
+      };
+      store.sites.push(defaultSite);
+    }
 
     saveLocalStore(store);
     return newProj;
@@ -497,6 +600,12 @@ export const localSites = {
   },
   create(site) {
     const store = getLocalStore();
+    const existingIdx = (store.sites || []).findIndex(s => s.id === site.id || (s.projectId === site.projectId && String(s.name).trim().toLowerCase() === String(site.name).trim().toLowerCase()));
+    if (existingIdx !== -1) {
+      store.sites[existingIdx] = { ...store.sites[existingIdx], ...site };
+      saveLocalStore(store);
+      return store.sites[existingIdx];
+    }
     const newSite = {
       id: site.id || `s-${Date.now()}`,
       projectId: site.projectId,
@@ -540,6 +649,12 @@ export const localTasks = {
   create(task) {
     const store = getLocalStore();
     const st = task.status || task.stage || 'todo';
+    const existingIdx = (store.tasks || []).findIndex(t => t.id === task.id || (t.siteId === task.siteId && String(t.name).trim().toLowerCase() === String(task.name).trim().toLowerCase()));
+    if (existingIdx !== -1) {
+      store.tasks[existingIdx] = { ...store.tasks[existingIdx], ...task, status: st, stage: st };
+      saveLocalStore(store);
+      return store.tasks[existingIdx];
+    }
     const newTask = {
       id: task.id || `t-${Date.now()}`,
       siteId: task.siteId,

@@ -142,7 +142,7 @@ const Tasks = () => {
     };
 
     // 1. Save directly to local storage
-    localTasks.create(payload);
+    const newTask = localTasks.create(payload);
     setSelectedSiteId(effectiveSiteId);
     setTasks(localTasks.list(effectiveSiteId));
     resetForm();
@@ -155,7 +155,10 @@ const Tasks = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          id: newTask.id
+        })
       });
       if (res.ok) {
         fetchTasks(effectiveSiteId);
