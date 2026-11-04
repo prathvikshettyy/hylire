@@ -23,8 +23,19 @@ export const AuthProvider = ({ children }) => {
     const savedToken = localStorage.getItem('hylire_token') || sessionStorage.getItem('hylire_token');
     
     if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser));
-      setToken(savedToken);
+      try {
+        const parsed = JSON.parse(savedUser);
+        if (parsed && typeof parsed === 'object') {
+          setUser(parsed);
+          setToken(savedToken);
+        }
+      } catch (err) {
+        console.error('Failed to parse cached session:', err);
+        localStorage.removeItem('hylire_user');
+        localStorage.removeItem('hylire_token');
+        sessionStorage.removeItem('hylire_user');
+        sessionStorage.removeItem('hylire_token');
+      }
     }
     setLoading(false);
   }, []);
