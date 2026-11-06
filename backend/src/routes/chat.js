@@ -15,7 +15,7 @@ router.get('/project/:projectId', async (req, res) => {
 
 // Send chat message
 router.post('/send', async (req, res) => {
-    const { projectId, senderId, senderName, messageText, fileUrl } = req.body;
+    const { id, projectId, senderId, senderName, messageText, fileUrl, createdAt } = req.body;
 
     if (!projectId || !senderId || !messageText) {
         return res.status(400).json({ error: 'Project ID, Sender ID, and Message Text are required' });
@@ -30,11 +30,13 @@ router.post('/send', async (req, res) => {
         }
 
         const newMsg = await db.chat.create({
+            id: id || undefined,
             projectId,
             senderId,
             senderName: finalSenderName,
             messageText,
-            fileUrl: fileUrl || null
+            fileUrl: fileUrl || null,
+            createdAt: createdAt || undefined
         });
 
         res.status(201).json(newMsg);

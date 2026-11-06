@@ -413,6 +413,24 @@
       "role": "builder",
       "messageText": "Approved. Ensure all safety vests and crane rigging certificates are logged before pouring.",
       "createdAt": "2026-11-06T15:04:54.704Z"
+    },
+    {
+      "id": "msg-1793979492848",
+      "projectId": "p-1793822033977",
+      "senderId": "u-1",
+      "senderName": "John Builder",
+      "messageText": "hi",
+      "fileUrl": null,
+      "createdAt": "2026-11-06T15:38:12.848Z"
+    },
+    {
+      "id": "msg-1793979547461",
+      "projectId": "p-1793822033977",
+      "senderId": "u-1",
+      "senderName": "John Builder",
+      "messageText": "hi",
+      "fileUrl": null,
+      "createdAt": "2026-11-06T15:39:07.461Z"
     }
   ],
   "projectUpdates": [

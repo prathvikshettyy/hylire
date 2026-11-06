@@ -27,6 +27,7 @@ const TeamChat = () => {
   });
 
   const [typedMessage, setTypedMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const chatHistoryRef = useRef(null);
 
   // Sync projects with API if available, but NEVER wipe local projects
@@ -106,21 +107,27 @@ const TeamChat = () => {
 
   const handleSend = async (e) => {
     e.preventDefault();
+    if (isSending) return;
+
     const activeProjId = selectedProjectId || (projects.length > 0 ? projects[0].id : null);
-    if (!typedMessage.trim() || !activeProjId) return;
+    const textToSend = typedMessage.trim();
+    if (!textToSend || !activeProjId) return;
+
+    setIsSending(true);
+    setTypedMessage(''); // Immediately clear input so fast double-clicks or Enter keys cannot re-submit
 
     const payload = {
       projectId: activeProjId,
       senderId: user ? user.id : 'u-1',
       senderName: user ? (user.fullName || user.email) : 'John Builder',
       role: user ? user.role : 'builder',
-      messageText: typedMessage.trim()
+      messageText: textToSend,
+      createdAt: new Date().toISOString()
     };
 
-    // 1. Immediately save to localChat so it persists in browser & shows instantly!
+    // 1. Immediately save to localChat with deduplication guard
     const savedMsg = localChat.create(payload);
     setMessages(localChat.listByProject(activeProjId));
-    setTypedMessage('');
 
     // 2. Sync to backend API if available
     try {
@@ -130,10 +137,12 @@ const TeamChat = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ ...payload, id: savedMsg.id })
+        body: JSON.stringify({ ...payload, id: savedMsg?.id })
       });
     } catch (err) {
       // Offline/standalone Vercel mode: message is already safely stored in localChat!
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -223,7 +232,7 @@ const TeamChat = () => {
               type="submit"
               className="btn btn-primary"
               style={{ padding: '0 18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              disabled={!typedMessage.trim()}
+              disabled={!typedMessage.trim() || isSending}
             >
               <Send size={16} />
             </button>

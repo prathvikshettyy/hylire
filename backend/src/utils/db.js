@@ -624,19 +624,37 @@ const db = {
             return (store.chatMessages || []).filter(msg => msg.projectId === projectId);
         },
         async create(message) {
-            const newMsg = { id: `msg-${Date.now()}`, ...message, createdAt: new Date().toISOString() };
+            const cleanText = String(message.messageText || '').trim();
+            const nowIso = message.createdAt || new Date().toISOString();
+            const newMsg = {
+                id: message.id || `msg-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                ...message,
+                messageText: cleanText,
+                createdAt: nowIso
+            };
+            const store = getStore();
+            if (!store.chatMessages) store.chatMessages = [];
+            
+            // Deduplicate: if an identical message exists within 5 seconds, reuse it
+            const existing = store.chatMessages.find(m => 
+                m.id === newMsg.id || 
+                (m.projectId === newMsg.projectId && m.senderId === newMsg.senderId && String(m.messageText).trim() === cleanText && Math.abs(new Date(m.createdAt).getTime() - new Date(nowIso).getTime()) < 5000)
+            );
+            if (existing) {
+                return existing;
+            }
+
             if (supabase) {
                 const { data, error } = await supabase.from('chat_messages').insert([{
                     project_id: message.projectId,
                     sender_id: message.senderId,
-                    message_text: message.messageText,
+                    message_text: cleanText,
                     file_url: message.fileUrl
                 }]).select().single();
                 if (error) throw error;
                 newMsg.id = data.id;
             }
-            const store = getStore();
-            if (!store.chatMessages) store.chatMessages = [];
+
             store.chatMessages.push(newMsg);
             saveStore(store);
             return newMsg;

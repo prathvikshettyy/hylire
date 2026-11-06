@@ -1,3 +1,27 @@
+
+// Helper to deduplicate chat messages by ID and time window signature
+export const deduplicateChatMessages = (messages) => {
+  if (!Array.isArray(messages)) return [];
+  const clean = [];
+  const seenIds = new Set();
+  const seenSignatures = new Set();
+
+  messages.forEach(m => {
+    if (!m || !m.messageText) return;
+    const msgId = String(m.id || '');
+    if (msgId && seenIds.has(msgId)) return;
+
+    const timeBucket = m.createdAt ? Math.floor(new Date(m.createdAt).getTime() / 10000) : 0;
+    const sig = `${m.projectId}_${m.senderId}_${String(m.messageText).trim()}_${timeBucket}`;
+    if (seenSignatures.has(sig)) return;
+
+    if (msgId) seenIds.add(msgId);
+    seenSignatures.add(sig);
+    clean.push(m);
+  });
+  return clean;
+};
+
 // Unified Client-Side Storage & Offline Persistence Engine for Hylire
 // Guarantees 100% data persistence on Vercel / GitHub Pages / Local deployments
 
@@ -334,7 +358,7 @@ export const getLocalStore = () => {
       expenses: Array.isArray(parsed.expenses) ? parsed.expenses : (DEFAULT_INITIAL_STATE.expenses || []),
       aiEstimations: Array.isArray(parsed.aiEstimations) ? parsed.aiEstimations : [],
       documents: Array.isArray(parsed.documents) ? parsed.documents : [],
-      chatMessages: Array.isArray(parsed.chatMessages) && parsed.chatMessages.length > 0 ? parsed.chatMessages : DEFAULT_INITIAL_STATE.chatMessages,
+      chatMessages: deduplicateChatMessages(Array.isArray(parsed.chatMessages) && parsed.chatMessages.length > 0 ? parsed.chatMessages : DEFAULT_INITIAL_STATE.chatMessages),
       projectUpdates: Array.isArray(parsed.projectUpdates) && parsed.projectUpdates.length > 0 ? parsed.projectUpdates : DEFAULT_INITIAL_STATE.projectUpdates
     };
   } catch (err) {
@@ -435,6 +459,11 @@ export const syncCollection = (collectionName, apiItems) => {
       }
     });
     merged = clean;
+  }
+
+  // Deduplicate chatMessages
+  if (collectionName === 'chatMessages') {
+    merged = deduplicateChatMessages(merged);
   }
 
   // Deduplicate sites by (projectId + name)
@@ -923,27 +952,47 @@ export const localDocuments = {
 export const localChat = {
   listByProject(projectId) {
     const store = getLocalStore();
-    const all = Array.isArray(store.chatMessages) && store.chatMessages.length > 0 
+    const rawAll = Array.isArray(store.chatMessages) && store.chatMessages.length > 0 
       ? store.chatMessages 
       : DEFAULT_INITIAL_STATE.chatMessages;
+    const all = deduplicateChatMessages(rawAll);
     if (!projectId) return all;
     return all.filter(m => m.projectId === projectId);
   },
   create(msg) {
     const store = getLocalStore();
-    if (!Array.isArray(store.chatMessages) || store.chatMessages.length === 0) {
+    if (!Array.isArray(store.chatMessages)) {
       store.chatMessages = [...DEFAULT_INITIAL_STATE.chatMessages];
     }
+    const cleanText = String(msg.messageText || '').trim();
+    if (!cleanText) return null;
+
+    const now = Date.now();
+    const nowIso = msg.createdAt || new Date(now).toISOString();
+
+    // Check if duplicate exists within 5 seconds
+    const existing = store.chatMessages.find(m => 
+      (msg.id && m.id === msg.id) ||
+      (m.projectId === msg.projectId &&
+       m.senderId === (msg.senderId || 'u-1') &&
+       String(m.messageText).trim() === cleanText &&
+       m.createdAt && Math.abs(now - new Date(m.createdAt).getTime()) < 5000)
+    );
+    if (existing) {
+      return existing;
+    }
+
     const newMsg = {
-      id: msg.id || `msg-${Date.now()}`,
+      id: msg.id || `msg-${now}-${Math.floor(Math.random() * 1000)}`,
       projectId: msg.projectId,
       senderId: msg.senderId || 'u-1',
       senderName: msg.senderName || 'John Builder',
       role: msg.role || 'builder',
-      messageText: msg.messageText || '',
-      createdAt: msg.createdAt || new Date().toISOString()
+      messageText: cleanText,
+      createdAt: nowIso
     };
-    store.chatMessages.push(newMsg);
+
+    store.chatMessages = deduplicateChatMessages([...store.chatMessages, newMsg]);
     saveLocalStore(store);
     return newMsg;
   }
