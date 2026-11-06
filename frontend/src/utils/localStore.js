@@ -3,7 +3,7 @@
 
 const STORAGE_KEY = 'hylire_db_store';
 
-const DEFAULT_INITIAL_STATE = {
+export const DEFAULT_INITIAL_STATE = {
   users: [
     { id: "u-1", email: "admin@hylire.com", fullName: "John Builder", role: "builder" },
     { id: "u-2", email: "engineer@hylire.com", fullName: "Sarah Engineer", role: "engineer" },
@@ -262,7 +262,35 @@ const DEFAULT_INITIAL_STATE = {
       createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     }
   ],
-  chatMessages: []
+  chatMessages: [
+    {
+      id: "msg-init-1",
+      projectId: "p-1789872275380",
+      senderId: "u-2",
+      senderName: "Sarah Engineer",
+      role: "engineer",
+      messageText: "Foundation footings for Block A have passed structural inspection and soil tests.",
+      createdAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString()
+    },
+    {
+      id: "msg-init-2",
+      projectId: "p-1789872275380",
+      senderId: "u-4",
+      senderName: "Mark Contractor",
+      role: "contractor",
+      messageText: "Ready-mix concrete delivery scheduled for tomorrow at 08:00 AM.",
+      createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString()
+    },
+    {
+      id: "msg-init-3",
+      projectId: "p-1789872275380",
+      senderId: "u-1",
+      senderName: "John Builder",
+      role: "builder",
+      messageText: "Approved. Ensure all safety vests and crane rigging certificates are logged before pouring.",
+      createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString()
+    }
+  ]
 };
 
 // Load full store from localStorage with fallback initialization
@@ -306,7 +334,7 @@ export const getLocalStore = () => {
       expenses: Array.isArray(parsed.expenses) ? parsed.expenses : (DEFAULT_INITIAL_STATE.expenses || []),
       aiEstimations: Array.isArray(parsed.aiEstimations) ? parsed.aiEstimations : [],
       documents: Array.isArray(parsed.documents) ? parsed.documents : [],
-      chatMessages: Array.isArray(parsed.chatMessages) ? parsed.chatMessages : [],
+      chatMessages: Array.isArray(parsed.chatMessages) && parsed.chatMessages.length > 0 ? parsed.chatMessages : DEFAULT_INITIAL_STATE.chatMessages,
       projectUpdates: Array.isArray(parsed.projectUpdates) && parsed.projectUpdates.length > 0 ? parsed.projectUpdates : DEFAULT_INITIAL_STATE.projectUpdates
     };
   } catch (err) {
@@ -895,17 +923,25 @@ export const localDocuments = {
 export const localChat = {
   listByProject(projectId) {
     const store = getLocalStore();
-    return store.chatMessages.filter(m => m.projectId === projectId);
+    const all = Array.isArray(store.chatMessages) && store.chatMessages.length > 0 
+      ? store.chatMessages 
+      : DEFAULT_INITIAL_STATE.chatMessages;
+    if (!projectId) return all;
+    return all.filter(m => m.projectId === projectId);
   },
   create(msg) {
     const store = getLocalStore();
+    if (!Array.isArray(store.chatMessages) || store.chatMessages.length === 0) {
+      store.chatMessages = [...DEFAULT_INITIAL_STATE.chatMessages];
+    }
     const newMsg = {
       id: msg.id || `msg-${Date.now()}`,
       projectId: msg.projectId,
       senderId: msg.senderId || 'u-1',
       senderName: msg.senderName || 'John Builder',
-      messageText: msg.messageText,
-      createdAt: new Date().toISOString()
+      role: msg.role || 'builder',
+      messageText: msg.messageText || '',
+      createdAt: msg.createdAt || new Date().toISOString()
     };
     store.chatMessages.push(newMsg);
     saveLocalStore(store);

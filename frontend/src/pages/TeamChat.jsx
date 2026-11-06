@@ -1,53 +1,89 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Users, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { localProjects, localChat, syncCollection } from '../utils/localStore';
+import { localProjects, localChat, syncCollection, DEFAULT_INITIAL_STATE } from '../utils/localStore';
 
 const TeamChat = () => {
   const { user, token, apiBaseUrl } = useAuth();
-  const [projects, setProjects] = useState(() => localProjects.list());
+  
+  // 1. Initialize projects from local storage
+  const [projects, setProjects] = useState(() => {
+    const list = localProjects.list();
+    return list.length > 0 ? list : DEFAULT_INITIAL_STATE.projects;
+  });
+
+  // 2. Initialize selected project ID
   const [selectedProjectId, setSelectedProjectId] = useState(() => {
     const list = localProjects.list();
-    return list.length > 0 ? list[0].id : '';
+    if (list.length > 0) return list[0].id;
+    return DEFAULT_INITIAL_STATE.projects[0]?.id || '';
   });
+
+  // 3. Initialize messages from local store for the selected project
   const [messages, setMessages] = useState(() => {
     const list = localProjects.list();
-    return list.length > 0 ? localChat.listByProject(list[0].id) : [];
+    const initId = list.length > 0 ? list[0].id : (DEFAULT_INITIAL_STATE.projects[0]?.id || '');
+    return initId ? localChat.listByProject(initId) : [];
   });
+
   const [typedMessage, setTypedMessage] = useState('');
   const chatHistoryRef = useRef(null);
 
+  // Sync projects with API if available, but NEVER wipe local projects
   const fetchProjects = async () => {
+    const local = localProjects.list();
+    const currentList = local.length > 0 ? local : DEFAULT_INITIAL_STATE.projects;
+    setProjects(currentList);
+    if (currentList.length > 0 && !selectedProjectId) {
+      setSelectedProjectId(currentList[0].id);
+    }
+
     try {
       const res = await fetch(`${apiBaseUrl}/projects`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setProjects(data);
-        if (data.length > 0) setSelectedProjectId(data[0].id);
+        if (Array.isArray(data) && data.length > 0) {
+          syncCollection('projects', data);
+          setProjects(data);
+          setSelectedProjectId(prev => prev && data.some(p => p.id === prev) ? prev : data[0].id);
+        }
       }
     } catch (err) {
-      setProjects([]);
-      setSelectedProjectId('');
+      // Standalone / Vercel offline mode: keep local projects
+      const fallback = localProjects.list();
+      const safe = fallback.length > 0 ? fallback : DEFAULT_INITIAL_STATE.projects;
+      setProjects(safe);
+      if (safe.length > 0 && !selectedProjectId) {
+        setSelectedProjectId(safe[0].id);
+      }
     }
   };
 
+  // Sync chat messages for active project
   const fetchChatHistory = async () => {
-    if (!selectedProjectId) {
-      setMessages([]);
-      return;
-    }
+    const activeProjId = selectedProjectId || (projects.length > 0 ? projects[0].id : null);
+    if (!activeProjId) return;
+
+    // Load from local store first so messages display immediately
+    const localMsgs = localChat.listByProject(activeProjId);
+    setMessages(localMsgs);
+
     try {
-      const res = await fetch(`${apiBaseUrl}/chat/project/${selectedProjectId}`, {
+      const res = await fetch(`${apiBaseUrl}/chat/project/${activeProjId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setMessages(data);
+        if (Array.isArray(data) && data.length > 0) {
+          syncCollection('chatMessages', data);
+          setMessages(localChat.listByProject(activeProjId));
+        }
       }
     } catch (err) {
-      setMessages([]);
+      // Offline fallback: keep local messages
+      setMessages(localChat.listByProject(activeProjId));
     }
   };
 
@@ -56,7 +92,9 @@ const TeamChat = () => {
   }, [token]);
 
   useEffect(() => {
-    fetchChatHistory();
+    if (selectedProjectId) {
+      fetchChatHistory();
+    }
   }, [selectedProjectId]);
 
   // Scroll to bottom of chat when new message arrives
@@ -68,47 +106,40 @@ const TeamChat = () => {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!typedMessage.trim() || !selectedProjectId) return;
+    const activeProjId = selectedProjectId || (projects.length > 0 ? projects[0].id : null);
+    if (!typedMessage.trim() || !activeProjId) return;
 
     const payload = {
-      projectId: selectedProjectId,
+      projectId: activeProjId,
       senderId: user ? user.id : 'u-1',
-      senderName: user ? user.fullName : 'John Builder',
-      messageText: typedMessage
+      senderName: user ? (user.fullName || user.email) : 'John Builder',
+      role: user ? user.role : 'builder',
+      messageText: typedMessage.trim()
     };
 
+    // 1. Immediately save to localChat so it persists in browser & shows instantly!
+    const savedMsg = localChat.create(payload);
+    setMessages(localChat.listByProject(activeProjId));
+    setTypedMessage('');
+
+    // 2. Sync to backend API if available
     try {
-      const res = await fetch(`${apiBaseUrl}/chat/send`, {
+      await fetch(`${apiBaseUrl}/chat/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ ...payload, id: savedMsg.id })
       });
-      if (res.ok) {
-        const newMsg = await res.json();
-        setMessages([...messages, newMsg]);
-        setTypedMessage('');
-      }
     } catch (err) {
-      console.warn('Offline mode: Sending mock message.');
-      const newMsg = {
-        id: `msg-${Date.now()}`,
-        projectId: selectedProjectId,
-        senderId: user ? user.id : 'u-1',
-        senderName: user ? user.fullName : 'John Builder',
-        messageText: typedMessage,
-        createdAt: new Date().toISOString()
-      };
-      setMessages([...messages, newMsg]);
-      setTypedMessage('');
+      // Offline/standalone Vercel mode: message is already safely stored in localChat!
     }
   };
 
   const getProjectName = () => {
     const proj = projects.find(p => p.id === selectedProjectId);
-    return proj ? proj.name : 'Collaboration Channel';
+    return proj ? proj.name : (projects[0]?.name || 'Collaboration Channel');
   };
 
   return (
@@ -125,9 +156,13 @@ const TeamChat = () => {
           value={selectedProjectId}
           onChange={(e) => setSelectedProjectId(e.target.value)}
         >
-          {projects.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
+          {projects.length > 0 ? (
+            projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))
+          ) : (
+            <option value="">General Project Channel</option>
+          )}
         </select>
       </div>
 
@@ -135,9 +170,16 @@ const TeamChat = () => {
         {/* Main Chat Panel */}
         <div className="chat-container">
           {/* Header */}
-          <div style={{ padding: '16px 20px', background: 'rgba(11, 14, 23, 0.6)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            padding: '16px 20px',
+            background: 'var(--chat-input-bar-bg)',
+            borderBottom: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10
+          }}>
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--color-success)', boxShadow: '0 0 10px var(--color-success)' }} />
-            <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{getProjectName()} Chatroom</span>
+            <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{getProjectName()} Chatroom</span>
           </div>
 
           {/* History */}
@@ -155,11 +197,11 @@ const TeamChat = () => {
                     key={msg.id} 
                     className={`chat-bubble ${isMe ? 'sent' : 'received'}`}
                   >
-                    {!isMe && <div className="chat-sender">{msg.senderName}</div>}
+                    {!isMe && <div className="chat-sender">{msg.senderName} {msg.role ? `(${msg.role})` : ''}</div>}
                     <div>{msg.messageText}</div>
                     <div className="chat-meta">
                       <span />
-                      <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                     </div>
                   </div>
                 );
@@ -175,9 +217,14 @@ const TeamChat = () => {
               placeholder="Type your project update here..." 
               value={typedMessage}
               onChange={(e) => setTypedMessage(e.target.value)}
-              style={{ background: 'rgba(255,255,255,0.02)' }}
+              style={{ background: 'var(--input-bg, rgba(255,255,255,0.02))' }}
             />
-            <button type="submit" className="btn btn-primary" style={{ padding: 12 }}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ padding: '0 18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              disabled={!typedMessage.trim()}
+            >
               <Send size={16} />
             </button>
           </form>

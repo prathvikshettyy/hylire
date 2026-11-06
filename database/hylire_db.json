@@ -299,7 +299,35 @@
       "createdAt": "2026-11-04T19:20:25.087Z"
     }
   ],
-  "chatMessages": [],
+  "chatMessages": [
+    {
+      "id": "msg-init-1",
+      "projectId": "p-1789872275380",
+      "senderId": "u-2",
+      "senderName": "Sarah Engineer",
+      "role": "engineer",
+      "messageText": "Foundation footings for Block A have passed structural inspection and soil tests.",
+      "createdAt": "2026-11-06T12:34:33.679Z"
+    },
+    {
+      "id": "msg-init-2",
+      "projectId": "p-1789872275380",
+      "senderId": "u-4",
+      "senderName": "Mark Contractor",
+      "role": "contractor",
+      "messageText": "Ready-mix concrete delivery scheduled for tomorrow at 08:00 AM.",
+      "createdAt": "2026-11-06T13:34:33.682Z"
+    },
+    {
+      "id": "msg-init-3",
+      "projectId": "p-1789872275380",
+      "senderId": "u-1",
+      "senderName": "John Builder",
+      "role": "builder",
+      "messageText": "Approved. Ensure all safety vests and crane rigging certificates are logged before pouring.",
+      "createdAt": "2026-11-06T15:04:33.682Z"
+    }
+  ],
   "aiEstimations": [],
   "projectUpdates": [
     {
